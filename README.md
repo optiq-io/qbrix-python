@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/httpx-async%20%2B%20sync-1e88e5" alt="httpx">
 </p>
 
+
 ---
 
 Typed sync and async clients for [Qbrix](https://github.com/optiq-io/qbrix) — pool/experiment/gate management and the agent select/feedback loop.
