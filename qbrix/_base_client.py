@@ -49,7 +49,8 @@ class BaseClient:
             headers["X-API-Key"] = self._config.api_key
         return headers
 
-    def _make_status_error(self, response: httpx.Response) -> QbrixAPIError:
+    @staticmethod
+    def _make_status_error(response: httpx.Response) -> QbrixAPIError:
         detail = ""
         context = None
         try:
