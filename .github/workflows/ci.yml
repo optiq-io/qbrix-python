@@ -26,4 +26,39 @@ jobs:
         run: uv sync
 
       - name: Run tests
-        run: uv run pytest --cov=qbrix
+        run: uv run pytest --cov=qbrix --cov-report=json
+
+      - name: Upload coverage artifact
+        if: matrix.python-version == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.json
+
+  coverage-badge:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+
+      - name: Extract coverage percentage
+        id: cov
+        run: |
+          COV=$(python3 -c "import json; print(round(json.load(open('coverage.json'))['totals']['percent_covered']))")
+          echo "coverage=$COV" >> "$GITHUB_OUTPUT"
+
+      - name: Update coverage badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: qbrix-coverage.json
+          label: coverage
+          message: ${{ steps.cov.outputs.coverage }}%
+          valColorRange: ${{ steps.cov.outputs.coverage }}
+          minColorRange: 50
+          maxColorRange: 90
