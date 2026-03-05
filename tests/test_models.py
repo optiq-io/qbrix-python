@@ -154,7 +154,7 @@ class TestGateModels:
         assert gc.rules == []
 
     def test_gate_config(self) -> None:
-        gc = GateConfig(experiment={"id": "e1", "name": "test"})
+        gc = GateConfig(experiment_id="e1")
         assert gc.version == 1
         assert gc.rules == []
 
