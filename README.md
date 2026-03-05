@@ -27,26 +27,31 @@ pip install qbrix
 
 ## Quick Start
 
-```python
-from qbrix import Qbrix
+Set your credentials as environment variables and call resources directly — no client instantiation needed:
 
-client = Qbrix(api_key="optiq_xxx", base_url="https://api.qbrix.io")
+```bash
+export QBRIX_API_KEY="optiq_xxx"
+export QBRIX_BASE_URL="https://api.qbrix.io"
+```
+
+```python
+import qbrix
 
 # 1. Create a pool of arms (variants)
-pool = client.pool.create(
+pool = qbrix.pool.create(
     name="homepage-buttons",
     arms=[{"name": "blue"}, {"name": "green"}, {"name": "red"}],
 )
 
 # 2. Create an experiment with a bandit policy
-exp = client.experiment.create(
+exp = qbrix.experiment.create(
     name="button-color-test",
     pool_id=pool.id,
     policy="BetaTSPolicy",
 )
 
 # 3. Select an arm for a user
-result = client.agent.select(
+result = qbrix.agent.select(
     experiment_id=exp.id,
     context={"id": "user-123", "metadata": {"country": "US"}},
 )
@@ -54,10 +59,26 @@ print(result.arm.name)       # "green"
 print(result.is_default)     # False (bandit selected)
 
 # 4. Send feedback (reward) after observing the outcome
-client.agent.feedback(request_id=result.request_id, reward=1.0)
+qbrix.agent.feedback(request_id=result.request_id, reward=1.0)
 ```
 
 The system learns from every reward and adjusts future selections automatically.
+
+## Explicit Client
+
+For full control over configuration or lifecycle (e.g. closing the HTTP connection, using a context manager), instantiate the client directly:
+
+```python
+from qbrix import Qbrix
+
+with Qbrix(api_key="optiq_xxx", base_url="https://api.qbrix.io") as client:
+    pool = client.pool.create(
+        name="homepage-buttons",
+        arms=[{"name": "blue"}, {"name": "green"}, {"name": "red"}],
+    )
+    result = client.agent.select(experiment_id="exp-uuid", context={"id": "user-123"})
+    client.agent.feedback(request_id=result.request_id, reward=1.0)
+```
 
 ## Async
 
@@ -99,7 +120,9 @@ client = Qbrix()  # picks up env vars automatically
 Attach a feature gate to control rollout before the bandit kicks in:
 
 ```python
-client.gate.create(
+import qbrix
+
+qbrix.gate.create(
     experiment_id=exp.id,
     enabled=True,
     rollout_percentage=80.0,
@@ -110,7 +133,7 @@ client.gate.create(
 )
 
 # Gate-matched selections return is_default=True
-result = client.agent.select(
+result = qbrix.agent.select(
     experiment_id=exp.id,
     context={"id": "user-789", "metadata": {"plan": "enterprise"}},
 )
@@ -120,10 +143,11 @@ print(result.is_default)  # True
 ## Error Handling
 
 ```python
-from qbrix.exception import NotFoundError, RateLimitedError
+import qbrix
+from qbrix import NotFoundError, RateLimitedError
 
 try:
-    exp = client.experiment.get("nonexistent-id")
+    exp = qbrix.experiment.get("nonexistent-id")
 except NotFoundError as e:
     print(f"Not found: {e.detail}")
 except RateLimitedError as e:
