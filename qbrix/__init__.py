@@ -1,7 +1,17 @@
 from qbrix._client import AsyncQbrix
 from qbrix._client import Qbrix
 from qbrix._config import QbrixConfig
+from qbrix._mod_client import _load_client
+from qbrix._mod_client import _reset_client
+from qbrix._proxies import AgentProxy
+from qbrix._proxies import ExperimentProxy
+from qbrix._proxies import GateProxy
+from qbrix._proxies import PoolProxy
 from qbrix._version import __version__
+from qbrix.resource.agent import AgentResource
+from qbrix.resource.experiment import ExperimentResource
+from qbrix.resource.gate import GateResource
+from qbrix.resource.pool import PoolResource
 from qbrix.exception import AuthenticationError
 from qbrix.exception import BadRequestError
 from qbrix.exception import ConflictError
@@ -30,11 +40,25 @@ from qbrix.model import PoolUpdate
 from qbrix.model import SelectedArm
 from qbrix.model import SelectResponse
 
+# module-level resource proxies — no explicit client instantiation required.
+# reads QBRIX_API_KEY and QBRIX_BASE_URL from environment on first use.
+pool: PoolResource = PoolProxy().__as_proxied__()  # type: ignore[assignment]
+experiment: ExperimentResource = ExperimentProxy().__as_proxied__()  # type: ignore[assignment]
+gate: GateResource = GateProxy().__as_proxied__()  # type: ignore[assignment]
+agent: AgentResource = AgentProxy().__as_proxied__()  # type: ignore[assignment]
+
 __all__ = [
     "__version__",
     "AsyncQbrix",
     "Qbrix",
     "QbrixConfig",
+    # module-level proxies
+    "pool",
+    "experiment",
+    "gate",
+    "agent",
+    "_load_client",
+    "_reset_client",
     # exceptions
     "AuthenticationError",
     "BadRequestError",
