@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from qbrix._resource import AsyncAPIResource
-from qbrix._resource import SyncAPIResource
+from qbrix.resource._base import AsyncAPIResource
+from qbrix.resource._base import SyncAPIResource
 from qbrix.model.agent import SelectResponse
 from qbrix.model.common import Context
 

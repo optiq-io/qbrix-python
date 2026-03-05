@@ -23,7 +23,7 @@ ARM_PROBS = {
     "variant-c": 0.138,
 }
 
-TOTAL_EVENTS = 10         # total simulation ticks
+TOTAL_EVENTS = 1000         # total simulation ticks
 SELECT_PROB = 0.55           # probability each tick is a selection (vs feedback)
 FEEDBACK_DELAY_MIN = 5      # min ticks before a selection becomes eligible for feedback
 

@@ -9,7 +9,7 @@ from tests.conftest import MockSyncClient
 
 
 GATE_RESPONSE = {
-    "experiment": {"id": "e1", "name": "test"},
+    "experiment_id": "e1",
     "rules": [{"key": "plan", "operator": "==", "value": "pro", "arm_id": "a1"}],
     "updated_at": "2024-01-01T00:00:00",
     "version": 1,
@@ -70,7 +70,7 @@ class TestGateResource:
         mock_client.enqueue(GATE_RESPONSE)
         resource = GateResource(mock_client)
         gate = resource.get("e1")
-        assert gate.experiment["id"] == "e1"
+        assert gate.experiment_id == "e1"
         assert mock_client.calls[0]["method"] == "GET"
 
     def test_update(self, mock_client: MockSyncClient) -> None:
