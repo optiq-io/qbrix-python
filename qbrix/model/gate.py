@@ -10,10 +10,11 @@ class GateRule(BaseModel):
     operator: str
     value: Any
     arm_id: str | None = None
+    arm_name: str | None = None
 
 
 class GateConfig(BaseModel):
-    experiment: dict[str, Any]
+    experiment_id: str
     rules: list[dict[str, Any]] = []
     updated_at: str | None = None
     version: int = 1
