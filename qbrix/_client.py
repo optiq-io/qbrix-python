@@ -66,3 +66,7 @@ class AsyncQbrix(AsyncAPIClient):
     @cached_property
     def agent(self) -> AsyncAgentResource:
         return AsyncAgentResource(self)
+
+
+Client = Qbrix
+AsyncClient = AsyncQbrix
