@@ -9,8 +9,8 @@ class QbrixConfig(BaseSettings):
 
     base_url: str = "http://localhost:8080"
     api_key: str | None = None
-    timeout: float = 30.0
-    max_retries: int = 3
+    timeout: float = 5.0
+    max_retries: int = 0
     retry_on: tuple[int, ...] = (429, 502, 503, 504)
     retry_base_delay: float = 0.5
     retry_max_delay: float = 30.0

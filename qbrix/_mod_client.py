@@ -12,7 +12,6 @@ def _load_client() -> "Qbrix":
     global _mod_client
     if _mod_client is None:
         from qbrix._client import Qbrix
-
         _mod_client = Qbrix()
     return _mod_client
 
