@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/optiq-io/qbrix-python/compare/v0.1.2...v0.1.3) (2026-03-12)
+
+
+### Features
+
+* create release github app and integrate ([6ecbf3b](https://github.com/optiq-io/qbrix-python/commit/6ecbf3b2f4c2bc1de61c094913e4b485dc346090))
+
 ## [0.1.2](https://github.com/optiq-io/qbrix-python/compare/v0.1.1...v0.1.2) (2026-03-05)
 
 
