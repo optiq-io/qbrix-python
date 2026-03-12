@@ -57,7 +57,7 @@ class BaseClient:
             body = response.json()
             detail = body.get("detail", response.text)
             context = body.get("context")
-        except Exception:
+        except Exception:  # noqa
             detail = response.text
 
         status = response.status_code
