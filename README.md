@@ -156,17 +156,17 @@ except RateLimitedError as e:
 
 ## Supported Policies
 
-| Policy | Type | Best For |
-|--------|------|----------|
-| `BetaTSPolicy` | Stochastic | Binary rewards (clicks, conversions) |
-| `GaussianTSPolicy` | Stochastic | Continuous rewards |
-| `UCB1TunedPolicy` | Stochastic | Theoretical regret guarantees |
-| `KLUCBPolicy` | Stochastic | Binary rewards with tight bounds |
-| `MOSSPolicy` | Stochastic | Fixed horizon problems |
-| `LinUCBPolicy` | Contextual | Linear reward models with features |
-| `LinTSPolicy` | Contextual | Linear models with uncertainty |
-| `EXP3Policy` | Adversarial | Non-stationary environments |
-| `FPLPolicy` | Adversarial | Follow the perturbed leader |
+| Policy             | Type        | Best For                             |
+|--------------------|-------------|--------------------------------------|
+| `BetaTSPolicy`     | Stochastic  | Binary rewards (clicks, conversions) |
+| `GaussianTSPolicy` | Stochastic  | Continuous rewards                   |
+| `UCB1TunedPolicy`  | Stochastic  | Theoretical regret guarantees        |
+| `KLUCBPolicy`      | Stochastic  | Binary rewards with tight bounds     |
+| `MOSSPolicy`       | Stochastic  | Fixed horizon problems               |
+| `LinUCBPolicy`     | Contextual  | Linear reward models with features   |
+| `LinTSPolicy`      | Contextual  | Linear models with uncertainty       |
+| `EXP3Policy`       | Adversarial | Non-stationary environments          |
+| `FPLPolicy`        | Adversarial | Follow the perturbed leader          |
 
 ## License
 
