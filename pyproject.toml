@@ -24,6 +24,12 @@ dependencies = [
     "pydantic-settings>=2.13.1",
 ]
 
+[project.optional-dependencies]
+mcp = ["mcp[cli]>=1.9.0"]
+
+[project.scripts]
+qbrix-mcp = "qbrixmcp.server:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.5",
