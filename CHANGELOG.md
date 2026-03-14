@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.4](https://github.com/optiq-io/qbrix-python/compare/v0.1.3...v0.1.4) (2026-03-14)
+
+
+### Features
+
+* created init mcp server ([e303507](https://github.com/optiq-io/qbrix-python/commit/e303507a0a21106772f392a1e51b4d43d4e4895e))
+* created init mcp server ([8e362dd](https://github.com/optiq-io/qbrix-python/commit/8e362dd8654c010623f5480bcc008a84678744de))
+
 ## [0.1.3](https://github.com/optiq-io/qbrix-python/compare/v0.1.2...v0.1.3) (2026-03-12)
 
 
