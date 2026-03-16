@@ -11,6 +11,14 @@ from qbrix._base_client import SyncAPIClient
 from qbrix._config import QbrixConfig
 
 
+@pytest.fixture(autouse=True)
+def _ignore_dotenv(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Prevent QbrixConfig from loading a local .env file during tests."""
+    monkeypatch.setattr(
+        QbrixConfig, "model_config", {**QbrixConfig.model_config, "env_file": None}
+    )
+
+
 class MockSyncClient(SyncAPIClient):
     """sync client with a mocked httpx.Client for testing resources."""
 
