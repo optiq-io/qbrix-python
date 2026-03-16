@@ -5,7 +5,7 @@ from pydantic_settings import SettingsConfigDict
 
 
 class QbrixConfig(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="QBRIX_")
+    model_config = SettingsConfigDict(env_prefix="QBRIX_", env_file=".env")
 
     base_url: str = "http://localhost:8080"
     api_key: str | None = None
