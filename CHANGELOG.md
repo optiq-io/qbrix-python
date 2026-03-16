@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/optiq-io/qbrix-python/compare/v0.1.4...v0.1.5) (2026-03-16)
+
+
+### Features
+
+* added .env support to qbrix ([3e6d96b](https://github.com/optiq-io/qbrix-python/commit/3e6d96b119fb0e002a4ddc9d28d5f30ded1a6d68))
+* update auto sync in release flow ([b26a942](https://github.com/optiq-io/qbrix-python/commit/b26a942e00e90cc90c1faea17a9015fe74370cc0))
+
 ## [0.1.4](https://github.com/optiq-io/qbrix-python/compare/v0.1.3...v0.1.4) (2026-03-14)
 
 
