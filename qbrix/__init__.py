@@ -1,4 +1,6 @@
+from qbrix._client import AsyncClient
 from qbrix._client import AsyncQbrix
+from qbrix._client import Client
 from qbrix._client import Qbrix
 from qbrix._config import QbrixConfig
 from qbrix._mod_client import _load_client
@@ -49,7 +51,9 @@ agent: AgentResource = AgentProxy().__as_proxied__()  # type: ignore[assignment]
 
 __all__ = [
     "__version__",
+    "AsyncClient",
     "AsyncQbrix",
+    "Client",
     "Qbrix",
     "QbrixConfig",
     # module-level proxies
