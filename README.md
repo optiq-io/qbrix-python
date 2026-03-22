@@ -17,7 +17,7 @@
 
 ---
 
-Typed sync and async clients for [Qbrix](https://github.com/optiq-io/qbrix) — pool/experiment/gate management and the agent select/feedback loop.
+Typed sync and async clients for [Qbrix](https://qbrix.io) — pool/experiment/gate management and the agent select/feedback loop.
 
 ## Installation
 
