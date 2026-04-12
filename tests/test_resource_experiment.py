@@ -35,7 +35,7 @@ class TestExperimentResource:
     def test_create_minimal(self, mock_client: MockSyncClient) -> None:
         mock_client.enqueue(EXP_RESPONSE)
         resource = ExperimentResource(mock_client)
-        exp = resource.create("cta-test", "p1", "beta_ts")
+        exp = resource.create("cta-test", "p1", policy="beta_ts")
 
         assert isinstance(exp, Experiment)
         assert exp.policy == "beta_ts"
@@ -49,7 +49,7 @@ class TestExperimentResource:
         mock_client.enqueue(EXP_RESPONSE)
         resource = ExperimentResource(mock_client)
         gate = GateCreate(rollout_percentage=50.0)
-        resource.create("test", "p1", "ucb1", feature_gate=gate)
+        resource.create("test", "p1", policy="ucb1", feature_gate=gate)
 
         call = mock_client.calls[0]
         assert call["json"]["feature_gate"]["rollout_percentage"] == 50.0
@@ -58,7 +58,7 @@ class TestExperimentResource:
         mock_client.enqueue(EXP_RESPONSE)
         resource = ExperimentResource(mock_client)
         resource.create(
-            "test", "p1", "ucb1", feature_gate={"rollout_percentage": 75.0}
+            "test", "p1", policy="ucb1", feature_gate={"rollout_percentage": 75.0}
         )
         call = mock_client.calls[0]
         assert call["json"]["feature_gate"]["rollout_percentage"] == 75.0
@@ -120,7 +120,7 @@ class TestAsyncExperimentResource:
     async def test_create(self, async_mock_client: MockAsyncClient) -> None:
         async_mock_client.enqueue(EXP_RESPONSE)
         resource = AsyncExperimentResource(async_mock_client)
-        exp = await resource.create("test", "p1", "beta_ts")
+        exp = await resource.create("test", "p1", policy="beta_ts")
         assert exp.id == "e1"
 
     async def test_list(self, async_mock_client: MockAsyncClient) -> None:

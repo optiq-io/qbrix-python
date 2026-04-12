@@ -8,11 +8,13 @@ from qbrix._mod_client import _reset_client
 from qbrix._proxies import AgentProxy
 from qbrix._proxies import ExperimentProxy
 from qbrix._proxies import GateProxy
+from qbrix._proxies import PolicyProxy
 from qbrix._proxies import PoolProxy
 from qbrix._version import __version__
 from qbrix.resource.agent import AgentResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import GateResource
+from qbrix.resource.policy import PolicyResource
 from qbrix.resource.pool import PoolResource
 from qbrix.exception import AuthenticationError
 from qbrix.exception import BadRequestError
@@ -36,6 +38,8 @@ from qbrix.model import GateConfig
 from qbrix.model import GateCreate
 from qbrix.model import GateRule
 from qbrix.model import PaginatedResponse
+from qbrix.model import Policy
+from qbrix.model import PolicyParam
 from qbrix.model import Pool
 from qbrix.model import PoolCreate
 from qbrix.model import PoolUpdate
@@ -48,6 +52,7 @@ pool: PoolResource = PoolProxy().__as_proxied__()  # type: ignore[assignment]
 experiment: ExperimentResource = ExperimentProxy().__as_proxied__()  # type: ignore[assignment]
 gate: GateResource = GateProxy().__as_proxied__()  # type: ignore[assignment]
 agent: AgentResource = AgentProxy().__as_proxied__()  # type: ignore[assignment]
+policy: PolicyResource = PolicyProxy().__as_proxied__()  # type: ignore[assignment]
 
 __all__ = [
     "__version__",
@@ -61,6 +66,7 @@ __all__ = [
     "experiment",
     "gate",
     "agent",
+    "policy",
     "_load_client",
     "_reset_client",
     # exceptions
@@ -87,6 +93,8 @@ __all__ = [
     "GateCreate",
     "GateRule",
     "PaginatedResponse",
+    "Policy",
+    "PolicyParam",
     "Pool",
     "PoolCreate",
     "PoolUpdate",

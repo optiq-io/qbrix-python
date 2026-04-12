@@ -15,7 +15,16 @@ class GateRule(BaseModel):
 
 class GateConfig(BaseModel):
     experiment_id: str
-    rules: list[dict[str, Any]] = []
+    enabled: bool = True
+    rollout_percentage: float = 100.0
+    default_arm_id: str | None = None
+    default_arm_name: str | None = None
+    schedule_start: str | None = None
+    schedule_end: str | None = None
+    active_hours_start: str | None = None
+    active_hours_end: str | None = None
+    timezone: str = "UTC"
+    rules: list[GateRule] = []
     updated_at: str | None = None
     version: int = 1
 
