@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/optiq-io/qbrix-python/compare/v0.1.5...v0.1.6) (2026-04-12)
+
+
+### Features
+
+* sync SDK with upstream proxy schema changes ([03fa6c2](https://github.com/optiq-io/qbrix-python/commit/03fa6c2268423e9397450e8c429fd503459f4601))
+
 ## [0.1.5](https://github.com/optiq-io/qbrix-python/compare/v0.1.4...v0.1.5) (2026-03-16)
 
 
