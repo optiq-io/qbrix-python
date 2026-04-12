@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from qbrix.model.gate import GateConfig
 from qbrix.model.gate import GateCreate
 from qbrix.model.pool import Pool
 
@@ -18,13 +19,14 @@ class Experiment(BaseModel):
     created_at: str | None = None
     updated_at: str | None = None
     pool: Pool | None = None
-    feature_gate: dict[str, Any] | None = None
+    feature_gate: GateConfig | None = None
+    meta_experiment_id: str | None = None
 
 
 class ExperimentCreate(BaseModel):
     name: str
     pool_id: str
-    policy: str
+    policy: str = ""
     policy_params: dict[str, Any] = {}
     enabled: bool = True
     feature_gate: GateCreate | None = None

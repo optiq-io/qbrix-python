@@ -4,6 +4,7 @@ from qbrix._util import LazyProxy
 from qbrix.resource.agent import AgentResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import GateResource
+from qbrix.resource.policy import PolicyResource
 from qbrix.resource.pool import PoolResource
 
 
@@ -31,3 +32,8 @@ class GateProxy(LazyProxy[GateResource]):
 class AgentProxy(LazyProxy[AgentResource]):
     def __load__(self) -> AgentResource:
         return _load_client().agent
+
+
+class PolicyProxy(LazyProxy[PolicyResource]):
+    def __load__(self) -> PolicyResource:
+        return _load_client().policy

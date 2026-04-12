@@ -10,6 +10,8 @@ from qbrix.resource.experiment import AsyncExperimentResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import AsyncGateResource
 from qbrix.resource.gate import GateResource
+from qbrix.resource.policy import AsyncPolicyResource
+from qbrix.resource.policy import PolicyResource
 from qbrix.resource.pool import AsyncPoolResource
 from qbrix.resource.pool import PoolResource
 
@@ -40,6 +42,10 @@ class Qbrix(SyncAPIClient):
     def agent(self) -> AgentResource:
         return AgentResource(self)
 
+    @cached_property
+    def policy(self) -> PolicyResource:
+        return PolicyResource(self)
+
 
 class AsyncQbrix(AsyncAPIClient):
     """asynchronous qbrix SDK client.
@@ -66,6 +72,10 @@ class AsyncQbrix(AsyncAPIClient):
     @cached_property
     def agent(self) -> AsyncAgentResource:
         return AsyncAgentResource(self)
+
+    @cached_property
+    def policy(self) -> AsyncPolicyResource:
+        return AsyncPolicyResource(self)
 
 
 Client = Qbrix
