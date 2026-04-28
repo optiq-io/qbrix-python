@@ -3,9 +3,11 @@ from __future__ import annotations
 import pytest
 
 from qbrix.exception import AuthenticationError
+from qbrix.exception import BadGatewayError
 from qbrix.exception import BadRequestError
 from qbrix.exception import ConflictError
 from qbrix.exception import ForbiddenError
+from qbrix.exception import GatewayTimeoutError
 from qbrix.exception import InternalServerError
 from qbrix.exception import NotFoundError
 from qbrix.exception import QbrixAPIError
@@ -74,13 +76,26 @@ class TestStatusCodeMapping:
             (409, ConflictError),
             (429, RateLimitedError),
             (500, InternalServerError),
+            (502, BadGatewayError),
             (503, ServiceUnavailableError),
+            (504, GatewayTimeoutError),
         ],
     )
-    def test_mapping(
-        self, code: int, expected_cls: type[QbrixAPIError]
-    ) -> None:
+    def test_mapping(self, code: int, expected_cls: type[QbrixAPIError]) -> None:
         assert STATUS_CODE_TO_EXCEPTION[code] is expected_cls
 
     def test_unknown_status_falls_back(self) -> None:
         assert 418 not in STATUS_CODE_TO_EXCEPTION
+
+
+@pytest.mark.unit
+class TestGatewayErrors:
+    def test_bad_gateway_inherits_api_error(self) -> None:
+        err = BadGatewayError(502, "upstream failed")
+        assert isinstance(err, QbrixAPIError)
+        assert err.status_code == 502
+
+    def test_gateway_timeout_inherits_api_error(self) -> None:
+        err = GatewayTimeoutError(504, "upstream timed out")
+        assert isinstance(err, QbrixAPIError)
+        assert err.status_code == 504

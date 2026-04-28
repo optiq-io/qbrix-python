@@ -66,8 +66,16 @@ class InternalServerError(QbrixAPIError):
     """500 — server error."""
 
 
+class BadGatewayError(QbrixAPIError):
+    """502 — upstream dependency failed."""
+
+
 class ServiceUnavailableError(QbrixAPIError):
     """503 — downstream service failure."""
+
+
+class GatewayTimeoutError(QbrixAPIError):
+    """504 — upstream dependency timed out."""
 
 
 class QbrixConnectionError(QbrixError):
@@ -86,5 +94,7 @@ STATUS_CODE_TO_EXCEPTION: dict[int, type[QbrixAPIError]] = {
     409: ConflictError,
     429: RateLimitedError,
     500: InternalServerError,
+    502: BadGatewayError,
     503: ServiceUnavailableError,
+    504: GatewayTimeoutError,
 }
