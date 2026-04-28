@@ -12,14 +12,18 @@ from qbrix._proxies import PolicyProxy
 from qbrix._proxies import PoolProxy
 from qbrix._version import __version__
 from qbrix.resource.agent import AgentResource
+from qbrix.resource.auth import AuthResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import GateResource
 from qbrix.resource.policy import PolicyResource
 from qbrix.resource.pool import PoolResource
+from qbrix.resource.runtime import RuntimeResource
 from qbrix.exception import AuthenticationError
+from qbrix.exception import BadGatewayError
 from qbrix.exception import BadRequestError
 from qbrix.exception import ConflictError
 from qbrix.exception import ForbiddenError
+from qbrix.exception import GatewayTimeoutError
 from qbrix.exception import InternalServerError
 from qbrix.exception import NotFoundError
 from qbrix.exception import QbrixAPIError
@@ -45,6 +49,12 @@ from qbrix.model import PoolCreate
 from qbrix.model import PoolUpdate
 from qbrix.model import SelectedArm
 from qbrix.model import SelectResponse
+from qbrix.model.auth import APIKeyCreated
+from qbrix.model.auth import APIKeyInfo
+from qbrix.model.auth import APIKeyUsage
+from qbrix.model.policy import PolicyName
+from qbrix.model.runtime import ServiceHealth
+from qbrix.model.runtime import StreamSize
 
 # module-level resource proxies — no explicit client instantiation required.
 # reads QBRIX_API_KEY and QBRIX_BASE_URL from environment on first use.
@@ -71,9 +81,11 @@ __all__ = [
     "_reset_client",
     # exceptions
     "AuthenticationError",
+    "BadGatewayError",
     "BadRequestError",
     "ConflictError",
     "ForbiddenError",
+    "GatewayTimeoutError",
     "InternalServerError",
     "NotFoundError",
     "QbrixAPIError",
@@ -82,7 +94,18 @@ __all__ = [
     "QbrixTimeoutError",
     "RateLimitedError",
     "ServiceUnavailableError",
+    # resources
+    "AgentResource",
+    "AuthResource",
+    "ExperimentResource",
+    "GateResource",
+    "PolicyResource",
+    "PoolResource",
+    "RuntimeResource",
     # models
+    "APIKeyCreated",
+    "APIKeyInfo",
+    "APIKeyUsage",
     "Arm",
     "ArmCreate",
     "Context",
@@ -94,10 +117,13 @@ __all__ = [
     "GateRule",
     "PaginatedResponse",
     "Policy",
+    "PolicyName",
     "PolicyParam",
     "Pool",
     "PoolCreate",
     "PoolUpdate",
     "SelectedArm",
     "SelectResponse",
+    "ServiceHealth",
+    "StreamSize",
 ]

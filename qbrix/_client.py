@@ -6,6 +6,8 @@ from qbrix._base_client import AsyncAPIClient
 from qbrix._base_client import SyncAPIClient
 from qbrix.resource.agent import AgentResource
 from qbrix.resource.agent import AsyncAgentResource
+from qbrix.resource.auth import AsyncAuthResource
+from qbrix.resource.auth import AuthResource
 from qbrix.resource.experiment import AsyncExperimentResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import AsyncGateResource
@@ -14,6 +16,8 @@ from qbrix.resource.policy import AsyncPolicyResource
 from qbrix.resource.policy import PolicyResource
 from qbrix.resource.pool import AsyncPoolResource
 from qbrix.resource.pool import PoolResource
+from qbrix.resource.runtime import AsyncRuntimeResource
+from qbrix.resource.runtime import RuntimeResource
 
 
 class Qbrix(SyncAPIClient):
@@ -46,6 +50,14 @@ class Qbrix(SyncAPIClient):
     def policy(self) -> PolicyResource:
         return PolicyResource(self)
 
+    @cached_property
+    def auth(self) -> AuthResource:
+        return AuthResource(self)
+
+    @cached_property
+    def runtime(self) -> RuntimeResource:
+        return RuntimeResource(self)
+
 
 class AsyncQbrix(AsyncAPIClient):
     """asynchronous qbrix SDK client.
@@ -76,6 +88,14 @@ class AsyncQbrix(AsyncAPIClient):
     @cached_property
     def policy(self) -> AsyncPolicyResource:
         return AsyncPolicyResource(self)
+
+    @cached_property
+    def auth(self) -> AsyncAuthResource:
+        return AsyncAuthResource(self)
+
+    @cached_property
+    def runtime(self) -> AsyncRuntimeResource:
+        return AsyncRuntimeResource(self)
 
 
 Client = Qbrix
