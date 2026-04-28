@@ -26,9 +26,7 @@ class AgentResource(SyncAPIResource):
             "experiment_id": experiment_id,
             "context": _build_context(context),
         }
-        return self._post(
-            "/api/v1/agent/select", body=body, cast_to=SelectResponse
-        )
+        return self._post("/api/v1/agent/select", body=body, cast_to=SelectResponse)
 
     def feedback(
         self,
