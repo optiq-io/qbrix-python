@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from collections.abc import Iterator
 from typing import Any
 
 from qbrix.resource._base import AsyncAPIResource
@@ -30,9 +32,7 @@ class PoolResource(SyncAPIResource):
     def get(self, pool_id: str) -> Pool:
         return self._get(f"/api/v1/pools/{pool_id}", cast_to=Pool)
 
-    def list(
-        self, *, limit: int = 100, offset: int = 0
-    ) -> PaginatedResponse[Pool]:
+    def list(self, *, limit: int = 100, offset: int = 0) -> PaginatedResponse[Pool]:
         data = self._client.get(
             "/api/v1/pools", params={"limit": limit, "offset": offset}
         )
@@ -55,6 +55,15 @@ class PoolResource(SyncAPIResource):
         data = self._client.get(f"/api/v1/pools/{pool_id}/experiments")
         items = data if isinstance(data, list) else data.get("experiments", [])
         return [Experiment.model_validate(e) for e in items]
+
+    def iter_all(self, *, limit: int = 100) -> Iterator[Pool]:
+        offset = 0
+        while True:
+            page = self.list(limit=limit, offset=offset)
+            yield from page.items
+            if not page.has_more:
+                break
+            offset += limit
 
 
 class AsyncPoolResource(AsyncAPIResource):
@@ -93,16 +102,22 @@ class AsyncPoolResource(AsyncAPIResource):
         body: dict[str, Any] = {}
         if name is not None:
             body["name"] = name
-        return await self._patch(
-            f"/api/v1/pools/{pool_id}", body=body, cast_to=Pool
-        )
+        return await self._patch(f"/api/v1/pools/{pool_id}", body=body, cast_to=Pool)
 
     async def delete(self, pool_id: str) -> None:
         await self._delete(f"/api/v1/pools/{pool_id}")
 
     async def list_experiments(self, pool_id: str) -> list[Experiment]:
-        data = await self._client.get(
-            f"/api/v1/pools/{pool_id}/experiments"
-        )
+        data = await self._client.get(f"/api/v1/pools/{pool_id}/experiments")
         items = data if isinstance(data, list) else data.get("experiments", [])
         return [Experiment.model_validate(e) for e in items]
+
+    async def aiter_all(self, *, limit: int = 100) -> AsyncIterator[Pool]:
+        offset = 0
+        while True:
+            page = await self.list(limit=limit, offset=offset)
+            for item in page.items:
+                yield item
+            if not page.has_more:
+                break
+            offset += limit

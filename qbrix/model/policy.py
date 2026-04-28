@@ -1,8 +1,24 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Literal
 
 from pydantic import BaseModel
+
+PolicyName = Literal[
+    "auto",
+    "BetaTSPolicy",
+    "GaussianTSPolicy",
+    "UCB1TunedPolicy",
+    "KLUCBPolicy",
+    "EpsilonPolicy",
+    "MOSSPolicy",
+    "MOSSAnyTimePolicy",
+    "LinUCBPolicy",
+    "LinTSPolicy",
+    "EXP3Policy",
+    "FPLPolicy",
+]
 
 
 class PolicyParam(BaseModel):

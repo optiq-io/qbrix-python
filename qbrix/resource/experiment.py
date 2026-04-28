@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from collections.abc import Iterator
 from typing import Any
 
 from qbrix.resource._base import AsyncAPIResource
@@ -7,6 +9,7 @@ from qbrix.resource._base import SyncAPIResource
 from qbrix.model.common import PaginatedResponse
 from qbrix.model.experiment import Experiment
 from qbrix.model.gate import GateCreate
+from qbrix.model.policy import PolicyName
 
 
 class ExperimentResource(SyncAPIResource):
@@ -17,7 +20,7 @@ class ExperimentResource(SyncAPIResource):
         name: str,
         pool_id: str,
         *,
-        policy: str = "auto",
+        policy: PolicyName = "auto",
         policy_params: dict[str, Any] | None = None,
         enabled: bool = True,
         feature_gate: GateCreate | dict[str, Any] | None = None,
@@ -38,9 +41,7 @@ class ExperimentResource(SyncAPIResource):
         return self._post("/api/v1/experiments", body=body, cast_to=Experiment)
 
     def get(self, experiment_id: str) -> Experiment:
-        return self._get(
-            f"/api/v1/experiments/{experiment_id}", cast_to=Experiment
-        )
+        return self._get(f"/api/v1/experiments/{experiment_id}", cast_to=Experiment)
 
     def list(
         self,
@@ -57,10 +58,7 @@ class ExperimentResource(SyncAPIResource):
             params["enabled"] = enabled
         data = self._client.get("/api/v1/experiments", params=params)
         return PaginatedResponse[Experiment](
-            items=[
-                Experiment.model_validate(e)
-                for e in data.get("experiments", [])
-            ],
+            items=[Experiment.model_validate(e) for e in data.get("experiments", [])],
             limit=data.get("limit", limit),
             offset=data.get("offset", offset),
         )
@@ -86,6 +84,21 @@ class ExperimentResource(SyncAPIResource):
     def delete(self, experiment_id: str) -> None:
         self._delete(f"/api/v1/experiments/{experiment_id}")
 
+    def iter_all(
+        self,
+        *,
+        search: str | None = None,
+        enabled: bool | None = None,
+        limit: int = 100,
+    ) -> Iterator[Experiment]:
+        offset = 0
+        while True:
+            page = self.list(limit=limit, offset=offset, search=search, enabled=enabled)
+            yield from page.items
+            if not page.has_more:
+                break
+            offset += limit
+
 
 class AsyncExperimentResource(AsyncAPIResource):
     """asynchronous experiment operations."""
@@ -95,7 +108,7 @@ class AsyncExperimentResource(AsyncAPIResource):
         name: str,
         pool_id: str,
         *,
-        policy: str = "auto",
+        policy: PolicyName = "auto",
         policy_params: dict[str, Any] | None = None,
         enabled: bool = True,
         feature_gate: GateCreate | dict[str, Any] | None = None,
@@ -113,9 +126,7 @@ class AsyncExperimentResource(AsyncAPIResource):
                 if isinstance(feature_gate, GateCreate)
                 else feature_gate
             )
-        return await self._post(
-            "/api/v1/experiments", body=body, cast_to=Experiment
-        )
+        return await self._post("/api/v1/experiments", body=body, cast_to=Experiment)
 
     async def get(self, experiment_id: str) -> Experiment:
         return await self._get(
@@ -137,10 +148,7 @@ class AsyncExperimentResource(AsyncAPIResource):
             params["enabled"] = enabled
         data = await self._client.get("/api/v1/experiments", params=params)
         return PaginatedResponse[Experiment](
-            items=[
-                Experiment.model_validate(e)
-                for e in data.get("experiments", [])
-            ],
+            items=[Experiment.model_validate(e) for e in data.get("experiments", [])],
             limit=data.get("limit", limit),
             offset=data.get("offset", offset),
         )
@@ -165,3 +173,21 @@ class AsyncExperimentResource(AsyncAPIResource):
 
     async def delete(self, experiment_id: str) -> None:
         await self._delete(f"/api/v1/experiments/{experiment_id}")
+
+    async def aiter_all(
+        self,
+        *,
+        search: str | None = None,
+        enabled: bool | None = None,
+        limit: int = 100,
+    ) -> AsyncIterator[Experiment]:
+        offset = 0
+        while True:
+            page = await self.list(
+                limit=limit, offset=offset, search=search, enabled=enabled
+            )
+            for item in page.items:
+                yield item
+            if not page.has_more:
+                break
+            offset += limit
