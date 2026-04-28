@@ -4,9 +4,10 @@ import pytest
 
 from qbrix.model.gate import GateConfig
 from qbrix.model.gate import GateRule
+from qbrix.resource.gate import AsyncGateResource
 from qbrix.resource.gate import GateResource
+from tests.conftest import MockAsyncClient
 from tests.conftest import MockSyncClient
-
 
 GATE_RESPONSE = {
     "experiment_id": "e1",
@@ -37,9 +38,7 @@ class TestGateResource:
         assert call["json"]["rollout_percentage"] == 80.0
         assert call["json"]["default_arm_id"] == "a1"
 
-    def test_create_with_gate_rule_models(
-        self, mock_client: MockSyncClient
-    ) -> None:
+    def test_create_with_gate_rule_models(self, mock_client: MockSyncClient) -> None:
         mock_client.enqueue(GATE_RESPONSE)
         resource = GateResource(mock_client)
         resource.create(
@@ -104,3 +103,34 @@ class TestGateResource:
         assert body["rules"] == []
         assert "default_arm_id" not in body
         assert "schedule_start" not in body
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestAsyncGateResource:
+    async def test_create(self, async_mock_client: MockAsyncClient) -> None:
+        async_mock_client.enqueue(GATE_RESPONSE)
+        resource = AsyncGateResource(async_mock_client)
+        gate = await resource.create("e1", rollout_percentage=80.0)
+        assert isinstance(gate, GateConfig)
+        assert async_mock_client.calls[0]["method"] == "POST"
+
+    async def test_get(self, async_mock_client: MockAsyncClient) -> None:
+        async_mock_client.enqueue(GATE_RESPONSE)
+        resource = AsyncGateResource(async_mock_client)
+        gate = await resource.get("e1")
+        assert gate.experiment_id == "e1"
+        assert async_mock_client.calls[0]["method"] == "GET"
+
+    async def test_update(self, async_mock_client: MockAsyncClient) -> None:
+        async_mock_client.enqueue({**GATE_RESPONSE, "version": 2})
+        resource = AsyncGateResource(async_mock_client)
+        gate = await resource.update("e1", rollout_percentage=50.0)
+        assert gate.version == 2
+        assert async_mock_client.calls[0]["method"] == "PUT"
+
+    async def test_delete(self, async_mock_client: MockAsyncClient) -> None:
+        async_mock_client.enqueue({})
+        resource = AsyncGateResource(async_mock_client)
+        await resource.delete("e1")
+        assert async_mock_client.calls[0]["method"] == "DELETE"

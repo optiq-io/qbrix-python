@@ -9,7 +9,6 @@ from qbrix.resource.pool import PoolResource
 from tests.conftest import MockAsyncClient
 from tests.conftest import MockSyncClient
 
-
 POOL_RESPONSE = {
     "id": "p1",
     "name": "colors",
@@ -91,22 +90,41 @@ class TestPoolResource:
         assert call["path"] == "/api/v1/pools/p1"
 
     def test_list_experiments(self, mock_client: MockSyncClient) -> None:
-        mock_client.enqueue({
-            "experiments": [
-                {
-                    "id": "e1",
-                    "name": "test",
-                    "pool_id": "p1",
-                    "policy": "beta_ts",
-                    "policy_params": {},
-                    "enabled": True,
-                }
-            ]
-        })
+        mock_client.enqueue(
+            {
+                "experiments": [
+                    {
+                        "id": "e1",
+                        "name": "test",
+                        "pool_id": "p1",
+                        "policy": "beta_ts",
+                        "policy_params": {},
+                        "enabled": True,
+                    }
+                ]
+            }
+        )
         resource = PoolResource(mock_client)
         exps = resource.list_experiments("p1")
         assert len(exps) == 1
         assert exps[0].id == "e1"
+
+    def test_iter_all_single_page(self, mock_client: MockSyncClient) -> None:
+        mock_client.enqueue(POOL_LIST_RESPONSE)
+        resource = PoolResource(mock_client)
+        items = list(resource.iter_all())
+        assert len(items) == 1
+        assert items[0].id == "p1"
+
+    def test_iter_all_multiple_pages(self, mock_client: MockSyncClient) -> None:
+        page1 = {"pools": [POOL_RESPONSE, POOL_RESPONSE], "limit": 2, "offset": 0}
+        page2 = {"pools": [POOL_RESPONSE], "limit": 2, "offset": 2}
+        mock_client.enqueue(page1)
+        mock_client.enqueue(page2)
+        resource = PoolResource(mock_client)
+        items = list(resource.iter_all(limit=2))
+        assert len(items) == 3
+        assert mock_client.calls[1]["params"]["offset"] == 2
 
 
 @pytest.mark.unit
@@ -130,8 +148,24 @@ class TestAsyncPoolResource:
         page = await resource.list(limit=10)
         assert len(page.items) == 1
 
+    async def test_update(self, async_mock_client: MockAsyncClient) -> None:
+        updated = {**POOL_RESPONSE, "name": "new-name"}
+        async_mock_client.enqueue(updated)
+        resource = AsyncPoolResource(async_mock_client)
+        pool = await resource.update("p1", name="new-name")
+        assert pool.name == "new-name"
+
     async def test_delete(self, async_mock_client: MockAsyncClient) -> None:
         async_mock_client.enqueue({})
         resource = AsyncPoolResource(async_mock_client)
         await resource.delete("p1")
         assert async_mock_client.calls[0]["method"] == "DELETE"
+
+    async def test_aiter_all_single_page(
+        self, async_mock_client: MockAsyncClient
+    ) -> None:
+        async_mock_client.enqueue(POOL_LIST_RESPONSE)
+        resource = AsyncPoolResource(async_mock_client)
+        items = [p async for p in resource.aiter_all()]
+        assert len(items) == 1
+        assert items[0].id == "p1"
