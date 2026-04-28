@@ -141,9 +141,7 @@ class TestGateModels:
         assert rule.arm_id is None
 
     def test_gate_rule_with_arm(self) -> None:
-        rule = GateRule(
-            key="plan", operator="==", value="enterprise", arm_id="a1"
-        )
+        rule = GateRule(key="plan", operator="==", value="enterprise", arm_id="a1")
         assert rule.arm_id == "a1"
 
     def test_gate_create_defaults(self) -> None:
@@ -162,9 +160,7 @@ class TestGateModels:
 @pytest.mark.unit
 class TestAgentModels:
     def test_select_request(self) -> None:
-        sr = SelectRequest(
-            experiment_id="e1", context=Context(id="u-1")
-        )
+        sr = SelectRequest(experiment_id="e1", context=Context(id="u-1"))
         assert sr.experiment_id == "e1"
 
     def test_select_response(self) -> None:

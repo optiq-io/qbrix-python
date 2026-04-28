@@ -25,14 +25,14 @@ class MockSyncClient(SyncAPIClient):
     def __init__(self) -> None:
         super().__init__(api_key="optiq_test_key", max_retries=0)
         self._calls: list[dict[str, Any]] = []
-        self._responses: list[dict[str, Any]] = []
+        self._responses: list[tuple[int, dict[str, Any]]] = []
         self._call_index = 0
         # replace real httpx client with a mock
         self._client = MagicMock(spec=httpx.Client)
         self._client.request = MagicMock(side_effect=self._fake_request)
 
-    def enqueue(self, response: dict[str, Any]) -> None:
-        self._responses.append(response)
+    def enqueue(self, response: dict[str, Any], *, status: int = 200) -> None:
+        self._responses.append((status, response))
 
     def _fake_request(
         self,
@@ -46,9 +46,9 @@ class MockSyncClient(SyncAPIClient):
             {"method": method, "path": path, "json": json, "params": params}
         )
         if self._call_index < len(self._responses):
-            data = self._responses[self._call_index]
+            status, data = self._responses[self._call_index]
             self._call_index += 1
-            return httpx.Response(200, json=data)
+            return httpx.Response(status, json=data)
         return httpx.Response(200, json={})
 
     @property
@@ -62,14 +62,14 @@ class MockAsyncClient(AsyncAPIClient):
     def __init__(self) -> None:
         super().__init__(api_key="optiq_test_key", max_retries=0)
         self._calls: list[dict[str, Any]] = []
-        self._responses: list[dict[str, Any]] = []
+        self._responses: list[tuple[int, dict[str, Any]]] = []
         self._call_index = 0
         # replace real httpx async client with a mock
         self._client = MagicMock(spec=httpx.AsyncClient)
         self._client.request = MagicMock(side_effect=self._fake_request)
 
-    def enqueue(self, response: dict[str, Any]) -> None:
-        self._responses.append(response)
+    def enqueue(self, response: dict[str, Any], *, status: int = 200) -> None:
+        self._responses.append((status, response))
 
     async def _fake_request(
         self,
@@ -83,9 +83,9 @@ class MockAsyncClient(AsyncAPIClient):
             {"method": method, "path": path, "json": json, "params": params}
         )
         if self._call_index < len(self._responses):
-            data = self._responses[self._call_index]
+            status, data = self._responses[self._call_index]
             self._call_index += 1
-            return httpx.Response(200, json=data)
+            return httpx.Response(status, json=data)
         return httpx.Response(200, json={})
 
     @property

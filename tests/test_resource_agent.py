@@ -9,7 +9,6 @@ from qbrix.resource.agent import AsyncAgentResource
 from tests.conftest import MockAsyncClient
 from tests.conftest import MockSyncClient
 
-
 SELECT_RESPONSE = {
     "arm": {"id": "a1", "name": "blue", "index": 1},
     "request_id": "tok_abc123",
@@ -35,9 +34,7 @@ class TestAgentResource:
         assert call["json"]["experiment_id"] == "e1"
         assert call["json"]["context"]["id"] == "user-1"
 
-    def test_select_with_context_model(
-        self, mock_client: MockSyncClient
-    ) -> None:
+    def test_select_with_context_model(self, mock_client: MockSyncClient) -> None:
         mock_client.enqueue(SELECT_RESPONSE)
         resource = AgentResource(mock_client)
         ctx = Context(id="user-2", metadata={"plan": "pro"})
@@ -90,17 +87,13 @@ class TestAgentResource:
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestAsyncAgentResource:
-    async def test_select(
-        self, async_mock_client: MockAsyncClient
-    ) -> None:
+    async def test_select(self, async_mock_client: MockAsyncClient) -> None:
         async_mock_client.enqueue(SELECT_RESPONSE)
         resource = AsyncAgentResource(async_mock_client)
         result = await resource.select("e1", {"id": "user-1"})
         assert result.arm.name == "blue"
 
-    async def test_feedback(
-        self, async_mock_client: MockAsyncClient
-    ) -> None:
+    async def test_feedback(self, async_mock_client: MockAsyncClient) -> None:
         async_mock_client.enqueue({})
         resource = AsyncAgentResource(async_mock_client)
         await resource.feedback("tok_abc", 1.0)

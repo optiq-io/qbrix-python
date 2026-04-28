@@ -9,7 +9,6 @@ from qbrix.resource.experiment import ExperimentResource
 from tests.conftest import MockAsyncClient
 from tests.conftest import MockSyncClient
 
-
 EXP_RESPONSE = {
     "id": "e1",
     "name": "cta-test",
@@ -113,6 +112,24 @@ class TestExperimentResource:
         call = mock_client.calls[0]
         assert call["method"] == "DELETE"
 
+    def test_iter_all_single_page(self, mock_client: MockSyncClient) -> None:
+        mock_client.enqueue(EXP_LIST_RESPONSE)
+        resource = ExperimentResource(mock_client)
+        items = list(resource.iter_all())
+        assert len(items) == 1
+        assert items[0].id == "e1"
+
+    def test_iter_all_multiple_pages(self, mock_client: MockSyncClient) -> None:
+        page1 = {"experiments": [EXP_RESPONSE] * 2, "limit": 2, "offset": 0}
+        page2 = {"experiments": [EXP_RESPONSE], "limit": 2, "offset": 2}
+        mock_client.enqueue(page1)
+        mock_client.enqueue(page2)
+        resource = ExperimentResource(mock_client)
+        items = list(resource.iter_all(limit=2))
+        assert len(items) == 3
+        assert len(mock_client.calls) == 2
+        assert mock_client.calls[1]["params"]["offset"] == 2
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
@@ -128,3 +145,42 @@ class TestAsyncExperimentResource:
         resource = AsyncExperimentResource(async_mock_client)
         page = await resource.list()
         assert len(page.items) == 1
+
+    async def test_get(self, async_mock_client: MockAsyncClient) -> None:
+        async_mock_client.enqueue(EXP_RESPONSE)
+        resource = AsyncExperimentResource(async_mock_client)
+        exp = await resource.get("e1")
+        assert exp.id == "e1"
+
+    async def test_update(self, async_mock_client: MockAsyncClient) -> None:
+        updated = {**EXP_RESPONSE, "enabled": False}
+        async_mock_client.enqueue(updated)
+        resource = AsyncExperimentResource(async_mock_client)
+        exp = await resource.update("e1", enabled=False)
+        assert exp.enabled is False
+
+    async def test_delete(self, async_mock_client: MockAsyncClient) -> None:
+        async_mock_client.enqueue({})
+        resource = AsyncExperimentResource(async_mock_client)
+        await resource.delete("e1")
+        assert async_mock_client.calls[0]["method"] == "DELETE"
+
+    async def test_aiter_all_single_page(
+        self, async_mock_client: MockAsyncClient
+    ) -> None:
+        async_mock_client.enqueue(EXP_LIST_RESPONSE)
+        resource = AsyncExperimentResource(async_mock_client)
+        items = [e async for e in resource.aiter_all()]
+        assert len(items) == 1
+        assert items[0].id == "e1"
+
+    async def test_aiter_all_multiple_pages(
+        self, async_mock_client: MockAsyncClient
+    ) -> None:
+        page1 = {"experiments": [EXP_RESPONSE] * 2, "limit": 2, "offset": 0}
+        page2 = {"experiments": [EXP_RESPONSE], "limit": 2, "offset": 2}
+        async_mock_client.enqueue(page1)
+        async_mock_client.enqueue(page2)
+        resource = AsyncExperimentResource(async_mock_client)
+        items = [e async for e in resource.aiter_all(limit=2)]
+        assert len(items) == 3
