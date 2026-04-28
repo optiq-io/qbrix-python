@@ -26,6 +26,12 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["mcp[cli]>=1.9.0"]
+http2 = ["httpx[http2]>=0.28.1"]
+benchmark = [
+    "numpy>=2.2.6",
+    "scipy>=1.15.3",
+    "tqdm>=4.66.0",
+]
 
 [project.scripts]
 qbrix-mcp = "qbrixmcp.server:main"
