@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.7](https://github.com/optiq-io/qbrix-python/compare/v0.1.6...v0.1.7) (2026-04-28)
+
+
+### Features
+
+* auth resource for API key management ([d59a962](https://github.com/optiq-io/qbrix-python/commit/d59a9628d6361ee4542cf70f02b2ee40f467d9f1))
+* config validation, improved defaults, http2 and pool limit settings ([86776e0](https://github.com/optiq-io/qbrix-python/commit/86776e0d44c9c5f990b675fcb4593033bfb706e1))
+* honor retry-after header and add user agent ([e75349e](https://github.com/optiq-io/qbrix-python/commit/e75349e73ff8588a7bb42714bcb269b000a5739e))
+* policy name literal type added and iter_all pagination helpers ([52dd483](https://github.com/optiq-io/qbrix-python/commit/52dd4839deff742700fa9b236ac533d920b07382))
+* runtime health resources added ([7cd0293](https://github.com/optiq-io/qbrix-python/commit/7cd02930251798f5370229d970f3382ae7c6ef0c))
+
+
+### Bug Fixes
+
+* map 502 and 504 to typed exception ([314819d](https://github.com/optiq-io/qbrix-python/commit/314819dc8d5f5ab7153b347171b2315dc07d4013))
+* thread-safe module level client singleton implementation ([3638a01](https://github.com/optiq-io/qbrix-python/commit/3638a012515a80b3359f4d45ad17f286160e3283))
+
 ## [0.1.6](https://github.com/optiq-io/qbrix-python/compare/v0.1.5...v0.1.6) (2026-04-12)
 
 
