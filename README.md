@@ -31,7 +31,7 @@ Set your credentials as environment variables and call resources directly — no
 
 ```bash
 export QBRIX_API_KEY="optiq_xxx"
-export QBRIX_BASE_URL="https://api.qbrix.io"
+export QBRIX_BASE_URL="https://cloud.qbrix.io"
 ```
 
 ```python
@@ -71,7 +71,7 @@ For full control over configuration or lifecycle (e.g. closing the HTTP connecti
 ```python
 from qbrix import Qbrix
 
-with Qbrix(api_key="optiq_xxx", base_url="https://api.qbrix.io") as client:
+with Qbrix(api_key="optiq_xxx", base_url="https://cloud.qbrix.io") as client:
     pool = client.pool.create(
         name="homepage-buttons",
         arms=[{"name": "blue"}, {"name": "green"}, {"name": "red"}],
@@ -99,7 +99,7 @@ Constructor kwargs take priority over environment variables, which take priority
 
 ```bash
 export QBRIX_API_KEY="optiq_xxx"
-export QBRIX_BASE_URL="https://api.qbrix.io"
+export QBRIX_BASE_URL="https://cloud.qbrix.io"
 ```
 
 ```python
