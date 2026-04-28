@@ -77,9 +77,7 @@ class GateResource(SyncAPIResource):
         )
 
     def get(self, experiment_id: str) -> GateConfig:
-        return self._get(
-            f"/api/v1/gates/{experiment_id}", cast_to=GateConfig
-        )
+        return self._get(f"/api/v1/gates/{experiment_id}", cast_to=GateConfig)
 
     def update(
         self,
@@ -147,9 +145,7 @@ class AsyncGateResource(AsyncAPIResource):
         )
 
     async def get(self, experiment_id: str) -> GateConfig:
-        return await self._get(
-            f"/api/v1/gates/{experiment_id}", cast_to=GateConfig
-        )
+        return await self._get(f"/api/v1/gates/{experiment_id}", cast_to=GateConfig)
 
     async def update(
         self,
