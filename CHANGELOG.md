@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/optiq-io/qbrix-python/compare/v0.1.7...v0.2.0) (2026-05-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* add gRPC transport alongside HTTP
+
+### Features
+
+* add gRPC transport alongside HTTP ([4cd0f2e](https://github.com/optiq-io/qbrix-python/commit/4cd0f2ed2b1c1768cfd48f383f1fad6491d094fa))
+
 ## [0.1.7](https://github.com/optiq-io/qbrix-python/compare/v0.1.6...v0.1.7) (2026-04-28)
 
 
