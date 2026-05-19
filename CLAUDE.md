@@ -38,25 +38,37 @@ uv run mypy qbrix/
 
 ## Architecture
 
-The SDK follows a layered client → resource → model pattern, with sync and async variants throughout.
+The SDK follows a layered client → transport → resource → model pattern, with sync and async variants throughout.
 
-### Client Layer (`_base_client.py`, `_client.py`)
+### Client Layer (`_client.py`)
 
 ```
-Qbrix / AsyncQbrix                    ← public entry points (users import these)
-    ↓ inherits
-SyncAPIClient / AsyncAPIClient         ← HTTP logic, retry, error mapping
-    ↓ wraps
-httpx.Client / httpx.AsyncClient       ← actual HTTP transport
+Qbrix / AsyncQbrix                       ← public entry points (users import these)
+    ↓ composes (transport= kwarg)
+Transport / AsyncTransport               ← protocol in _transport/_base.py
+    ↓ implemented by
+HTTPTransport          GRPCTransport     ← _transport/_http/, _transport/_grpc/
+    ↓ wraps                ↓ wraps
+httpx.Client           grpc.Channel
 ```
 
-`Qbrix` and `AsyncQbrix` expose resources as `@cached_property` — lazily instantiated on first access. The client itself IS the transport (no separate transport layer, despite what SDK-DESIGN.md describes — that abstraction was collapsed during implementation).
+`Qbrix`/`AsyncQbrix` hold a transport via **composition** (`self._transport`) and delegate the HTTP-shaped verb interface (`get`/`post`/`put`/`patch`/`delete`/`request`) to it. They expose resources as `@cached_property` — lazily instantiated on first access.
 
-**Key divergences from SDK-DESIGN.md:** Client classes are `Qbrix`/`AsyncQbrix` (not `QbrixClient`/`AsyncQbrixClient`). Resource accessors are singular: `client.pool`, `client.experiment`, `client.gate`, `client.agent` (not plural). No `transport/` package exists.
+Transport is chosen by `Qbrix(transport="http"|"grpc")`, falling back to the `QBRIX_TRANSPORT` env var, then the `base_url` scheme (`grpc://`/`grpcs://` → gRPC), then HTTP. The factory in `_client.py` lazy-imports the transport module so HTTP-only users never need `grpcio` (and vice versa); a missing extra raises a clear `ImportError`.
 
-### Resource Layer (`_resource.py`, `resource/`)
+`qbrix/_base_client.py` is a back-compat shim re-exporting `SyncAPIClient`/`AsyncAPIClient` as aliases of `HTTPTransport`/`AsyncHTTPTransport`.
 
-Each resource file defines both sync and async variants (`PoolResource`/`AsyncPoolResource`, etc.). Resources hold a reference to the client and delegate HTTP calls through `_get`, `_post`, `_put`, `_patch`, `_delete` helpers from `SyncAPIResource`/`AsyncAPIResource`.
+### Transport Layer (`_transport/`)
+
+Both transports satisfy the `Transport`/`AsyncTransport` protocol (`_transport/_base.py`) — an HTTP-shaped verb interface. Resources call `self._client.post("/api/v1/pools", ...)` and never know which wire format is active.
+
+- **HTTP** (`_transport/_http/_client.py`): httpx-based; retry loop, `_make_status_error`, header construction.
+- **gRPC** (`_transport/_grpc/`): `_routes.py` maps `(method, path)` → one of 17 `ProxyService` RPCs; `_handlers.py` builds proto requests + converts responses; `_convert.py` holds explicit proto↔dict converters; `_error.py` maps `grpc.StatusCode` → the same `QbrixAPIError` subclasses. Paths with no proto RPC (`/api/auth/*`, `/api/v1/policies`, `/api/v1/runtime/*`) raise `NotImplementedError` — those resources are HTTP-only.
+- **Vendored protos** (`_transport/_grpc/_proto/`): generated `*_pb2.py`/`.pyi` from `../qbrix/proto/{common,proxy}.proto`. Regenerate with `make proto` (or `bash bin/regen_protos.sh`); committed to git, never hand-edited.
+
+### Resource Layer (`resource/`)
+
+Each resource file defines both sync and async variants (`PoolResource`/`AsyncPoolResource`, etc.). Resources hold a reference to the client and delegate calls through `_get`, `_post`, `_put`, `_patch`, `_delete` helpers from `SyncAPIResource`/`AsyncAPIResource`. The resource layer is transport-agnostic — it predates gRPC and was not modified when gRPC was added.
 
 **`cast_to` pattern:** Resource methods pass `cast_to=ModelClass` to the client's `request()` method, which calls `ModelClass.model_validate(data)` on the JSON response. Methods that don't need a response model (like `delete`, `feedback`) omit `cast_to`.
 
@@ -68,11 +80,11 @@ All models are Pydantic v2 `BaseModel` subclasses. Request models (e.g., `PoolCr
 
 ### Config (`_config.py`)
 
-`QbrixConfig` extends `pydantic-settings.BaseSettings` with `env_prefix="QBRIX_"`. Resolution order: constructor kwargs → env vars (`QBRIX_API_KEY`, `QBRIX_BASE_URL`, etc.) → defaults. The `BaseClient.__init__` filters out `None` kwargs before passing to `QbrixConfig` so that env vars aren't shadowed by explicit `None`.
+`QbrixConfig` extends `pydantic-settings.BaseSettings` with `env_prefix="QBRIX_"`. Resolution order: constructor kwargs → env vars (`QBRIX_API_KEY`, `QBRIX_BASE_URL`, etc.) → defaults. The `BaseClient.__init__` filters out `None` kwargs before passing to `QbrixConfig` so that env vars aren't shadowed by explicit `None`. HTTP-specific fields: `http2`, `max_connections`, `max_keepalive_connections`. gRPC-specific fields: `grpc_keepalive_time_ms`, `grpc_keepalive_timeout_ms`, `grpc_use_tls` (default `False`).
 
 ### Error Handling (`exception.py`)
 
-`_base_client._make_status_error()` parses JSON response for `detail` and `context` fields, maps status codes via `STATUS_CODE_TO_EXCEPTION` dict. Unknown status codes fall back to `QbrixAPIError`. `RateLimitedError` parses `Retry-After` header. Network errors map to `QbrixConnectionError`/`QbrixTimeoutError`.
+HTTP: `BaseClient._make_status_error()` parses JSON response for `detail` and `context` fields, maps status codes via `STATUS_CODE_TO_EXCEPTION` dict. `RateLimitedError` parses the `Retry-After` header. gRPC: `_transport/_grpc/_error.py` maps `grpc.StatusCode` → the same exception classes, synthesizing an HTTP-equivalent `status_code`, and pulls `retry-after` from trailing metadata. Both unknown HTTP codes and unknown gRPC statuses fall back to `QbrixAPIError`. Network/deadline errors map to `QbrixConnectionError`/`QbrixTimeoutError`.
 
 ## Proxy API Reference
 
@@ -100,15 +112,32 @@ Contextual policies (`LinUCBPolicy`, `LinTSPolicy`) require `context.vector` wit
 
 Gate checks: enabled → schedule (date range) → active hours → rollout percentage (hash-based) → rules (first match wins). Any negative check → return `default_arm`, skip bandit.
 
+## Commands (gRPC)
+
+```bash
+# Regenerate vendored gRPC stubs from ../qbrix/proto
+make proto                # or: bash bin/regen_protos.sh
+
+# Verify vendored stubs are current (CI check)
+make proto-check
+
+# Live HTTP+gRPC parity smoke against a running docker-compose proxy
+QBRIX_API_KEY=optiq_xxx uv run python bin/smoke_dual_transport.py
+```
+
 ## Testing Patterns
 
-Tests use a `MockSyncClient`/`MockAsyncClient` infrastructure (in `conftest.py`) that subclasses the real API client and replaces the httpx client with a mock. Use `mock_client.enqueue({...})` to stage responses and `mock_client.calls[n]` to assert request method/path/body.
+HTTP tests use a `MockSyncClient`/`MockAsyncClient` infrastructure (in `conftest.py`) that subclasses the real API client and replaces the httpx client with a mock. Use `mock_client.enqueue({...})` to stage responses and `mock_client.calls[n]` to assert request method/path/body.
 
-Async tests use `@pytest.mark.asyncio` on the class. Test markers: `unit`, `integration`, `slow`.
+gRPC tests use the `grpc_client`/`async_grpc_client` fixtures — a `GRPCTransport` with the channel patched out and `_stub` swapped for a `MagicMock`. Stage proto responses via `grpc_client._stub.<RpcName>.return_value = ...`. gRPC test modules start with `pytest.importorskip("grpc")` and carry the `grpc` marker.
+
+Async tests use `@pytest.mark.asyncio` on the class. Test markers: `unit`, `integration`, `slow`, `grpc`.
 
 ## Conventions
 
-- Internal modules are prefixed with `_` (e.g., `_base_client.py`, `_config.py`, `_resource.py`)
+- Internal modules are prefixed with `_` (e.g., `_base_client.py`, `_config.py`, `_client.py`)
 - Public API surface is defined in `__init__.py` — keep it updated when adding models/exceptions
 - Python ≥ 3.10 required (uses `X | Y` union syntax)
-- Dependencies: `httpx`, `pydantic`, `pydantic-settings` (runtime); `pytest`, `pytest-asyncio`, `pytest-mock`, `pytest-cov`, `black`, `pre-commit` (dev)
+- Runtime deps: `click`, `pydantic`, `pydantic-settings` core; `httpx` via the `[http]` extra, `grpcio`+`protobuf` via `[grpc]`, both via `[all]`
+- Dev deps: `pytest`, `pytest-asyncio`, `pytest-mock`, `pytest-cov`, `black`, `pre-commit`, plus `qbrix[all]`
+- Never hand-edit `qbrix/_transport/_grpc/_proto/` — regenerate with `make proto`

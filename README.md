@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/eskinmi/c7d91705ef877065365d0febc49e0ea9/raw/qbrix-coverage.json" alt="Coverage">
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/pydantic-v2-e92063?logo=pydantic&logoColor=white" alt="Pydantic v2">
-  <img src="https://img.shields.io/badge/httpx-async%20%2B%20sync-1e88e5" alt="httpx">
+  <img src="https://img.shields.io/badge/transports-HTTP%20%2B%20gRPC-1e88e5" alt="Transports">
 </p>
 
 
@@ -21,9 +21,15 @@ Typed sync and async clients for [Qbrix](https://qbrix.io) — pool/experiment/g
 
 ## Installation
 
+The SDK speaks to the qbrix proxy over either HTTP/JSON or gRPC — pick a transport (or install both):
+
 ```bash
-pip install qbrix
+pip install qbrix[http]   # HTTP/JSON transport (httpx)
+pip install qbrix[grpc]   # gRPC transport (grpcio)
+pip install qbrix[all]    # both
 ```
+
+`pip install qbrix` with no extra installs only the models and config layer — constructing a client then raises a clear `ImportError` naming the extra to add.
 
 ## Quick Start
 
@@ -64,9 +70,27 @@ qbrix.agent.feedback(request_id=result.request_id, reward=1.0)
 
 The system learns from every reward and adjusts future selections automatically.
 
+## Transports
+
+The same `Qbrix` client, resources, and Pydantic models work over either wire format — only the transport differs:
+
+```python
+from qbrix import Qbrix
+
+# HTTP (default)
+client = Qbrix(transport="http", base_url="https://cloud.qbrix.io")
+
+# gRPC
+client = Qbrix(transport="grpc", base_url="grpcs://cloud.qbrix.io:443")
+```
+
+When `transport` is omitted it's resolved in this order: the `transport=` kwarg → the `QBRIX_TRANSPORT` env var → the `base_url` scheme (`grpc://` / `grpcs://` → gRPC) → HTTP.
+
+The gRPC transport covers **pool, experiment, gate, and agent** operations. The `auth`, `policy`, and `runtime` resources are HTTP-only (the proxy doesn't expose them over gRPC) — calling them on a gRPC client raises `NotImplementedError`. Install `qbrix[all]` and use `transport="http"` if you need them.
+
 ## Explicit Client
 
-For full control over configuration or lifecycle (e.g. closing the HTTP connection, using a context manager), instantiate the client directly:
+For full control over configuration or lifecycle (e.g. closing the transport connection, using a context manager), instantiate the client directly:
 
 ```python
 from qbrix import Qbrix
@@ -112,8 +136,11 @@ client = Qbrix()  # picks up env vars automatically
 |---------|---------|-------------|
 | `QBRIX_API_KEY` | `None` | API key (`optiq_xxx`) |
 | `QBRIX_BASE_URL` | `http://localhost:8080` | Proxy service URL |
-| `QBRIX_TIMEOUT` | `30.0` | Request timeout (seconds) |
-| `QBRIX_MAX_RETRIES` | `3` | Retry count on 429/5xx |
+| `QBRIX_TRANSPORT` | _(auto)_ | `http` or `grpc` — overrides URL-scheme detection |
+| `QBRIX_TIMEOUT` | `30.0` | Request timeout / gRPC deadline (seconds) |
+| `QBRIX_MAX_RETRIES` | `2` | Retry count on transient failures (429/5xx, gRPC `UNAVAILABLE`) |
+
+gRPC-only knobs: `QBRIX_GRPC_KEEPALIVE_TIME_MS` (`30000`), `QBRIX_GRPC_KEEPALIVE_TIMEOUT_MS` (`10000`), `QBRIX_GRPC_USE_TLS` (`false`).
 
 ## Feature Gates
 

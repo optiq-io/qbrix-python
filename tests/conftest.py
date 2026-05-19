@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -110,3 +111,49 @@ def config() -> QbrixConfig:
         base_url="http://localhost:8080",
         max_retries=0,
     )
+
+
+# ---- gRPC fixtures -----------------------------------------------------------
+# The fixtures import grpc lazily; tests that use them should put
+# ``pytest.importorskip("grpc")`` at the top of the module.
+
+
+def _build_mock_grpc_client():  # type: ignore[no-untyped-def]
+    """Return a sync GRPCTransport with channel/stub replaced by mocks."""
+    from qbrix._transport._grpc import GRPCTransport
+
+    with patch("qbrix._transport._grpc._client.grpc.insecure_channel"):
+        client = GRPCTransport(
+            api_key="optiq_test_key",
+            base_url="localhost:50050",
+            max_retries=0,
+        )
+    # No spec — ProxyServiceStub attaches RPC methods in __init__, so a class
+    # spec wouldn't see them. The bare MagicMock auto-generates any attribute.
+    client._stub = MagicMock()
+    return client
+
+
+def _build_mock_async_grpc_client():  # type: ignore[no-untyped-def]
+    from qbrix._transport._grpc import AsyncGRPCTransport
+
+    with patch("qbrix._transport._grpc._client.grpc.aio.insecure_channel"):
+        client = AsyncGRPCTransport(
+            api_key="optiq_test_key",
+            base_url="localhost:50050",
+            max_retries=0,
+        )
+    # No spec — ProxyServiceStub attaches RPC methods in __init__, so a class
+    # spec wouldn't see them. The bare MagicMock auto-generates any attribute.
+    client._stub = MagicMock()
+    return client
+
+
+@pytest.fixture
+def grpc_client():  # type: ignore[no-untyped-def]
+    return _build_mock_grpc_client()
+
+
+@pytest.fixture
+def async_grpc_client():  # type: ignore[no-untyped-def]
+    return _build_mock_async_grpc_client()
