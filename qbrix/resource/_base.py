@@ -7,16 +7,16 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from qbrix._base_client import AsyncAPIClient
-    from qbrix._base_client import SyncAPIClient
+    from qbrix._transport._base import AsyncTransport
+    from qbrix._transport._base import Transport
 
 _T = TypeVar("_T", bound=BaseModel)
 
 
 class SyncAPIResource:
-    _client: SyncAPIClient
+    _client: Transport
 
-    def __init__(self, client: SyncAPIClient) -> None:
+    def __init__(self, client: Transport) -> None:
         self._client = client
 
     def _get(
@@ -60,9 +60,9 @@ class SyncAPIResource:
 
 
 class AsyncAPIResource:
-    _client: AsyncAPIClient
+    _client: AsyncTransport
 
-    def __init__(self, client: AsyncAPIClient) -> None:
+    def __init__(self, client: AsyncTransport) -> None:
         self._client = client
 
     async def _get(

@@ -19,14 +19,20 @@ classifiers = [
 ]
 dependencies = [
     "click>=8.3.1",
-    "httpx>=0.28.1",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
 ]
 
 [project.optional-dependencies]
-mcp = ["mcp[cli]>=1.9.0"]
+# Wire transports — pick one (or use `qbrix[all]` for both).
+http = ["httpx>=0.28.1"]
 http2 = ["httpx[http2]>=0.28.1"]
+grpc = ["grpcio>=1.60.0", "protobuf>=6.31.1,<7"]
+all = ["qbrix[http,grpc]"]
+
+# MCP server uses the HTTP transport today.
+mcp = ["mcp[cli]>=1.9.0", "qbrix[http]"]
+
 benchmark = [
     "numpy>=2.2.6",
     "scipy>=1.15.3",
@@ -44,6 +50,7 @@ dev = [
     "black>=26.1.0",
     "pytest-mock>=3.14.1",
     "pytest-asyncio>=1.3.0",
+    "qbrix[all]",
 ]
 
 [tool.pytest.ini_options]
@@ -59,7 +66,13 @@ markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "slow: Slow running tests",
+    "grpc: Tests that require the gRPC transport extras",
 ]
+
+[tool.black]
+# Generated gRPC stubs are regenerated raw by bin/regen_protos.sh; reformatting
+# them would make `make proto-check` fail against a fresh regen.
+extend-exclude = "qbrix/_transport/_grpc/_proto/"
 
 [build-system]
 requires = ["hatchling"]

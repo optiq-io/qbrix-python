@@ -19,6 +19,14 @@ class QbrixConfig(BaseSettings):
     max_connections: int | None = None
     max_keepalive_connections: int | None = None
 
+    # gRPC transport (no effect when transport="http").
+    # Defaults mirror /Users/eskinmi/Dev/qbrix/svc/proxy/src/proxysvc/client.py.
+    grpc_keepalive_time_ms: int = 30_000
+    grpc_keepalive_timeout_ms: int = 10_000
+    grpc_http2_max_pings_without_data: int = 0
+    grpc_keepalive_permit_without_calls: bool = True
+    grpc_use_tls: bool = False
+
     @field_validator("timeout")
     @classmethod
     def _check_timeout(cls, v: float) -> float:
