@@ -12,7 +12,6 @@ from qbrix._proxies import PolicyProxy
 from qbrix._proxies import PoolProxy
 from qbrix._version import __version__
 from qbrix.resource.agent import AgentResource
-from qbrix.resource.auth import AuthResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import GateResource
 from qbrix.resource.policy import PolicyResource
@@ -49,9 +48,6 @@ from qbrix.model import PoolCreate
 from qbrix.model import PoolUpdate
 from qbrix.model import SelectedArm
 from qbrix.model import SelectResponse
-from qbrix.model.auth import APIKeyCreated
-from qbrix.model.auth import APIKeyInfo
-from qbrix.model.auth import APIKeyUsage
 from qbrix.model.policy import PolicyName
 from qbrix.model.runtime import ServiceHealth
 from qbrix.model.runtime import StreamSize
@@ -96,16 +92,12 @@ __all__ = [
     "ServiceUnavailableError",
     # resources
     "AgentResource",
-    "AuthResource",
     "ExperimentResource",
     "GateResource",
     "PolicyResource",
     "PoolResource",
     "RuntimeResource",
     # models
-    "APIKeyCreated",
-    "APIKeyInfo",
-    "APIKeyUsage",
     "Arm",
     "ArmCreate",
     "Context",

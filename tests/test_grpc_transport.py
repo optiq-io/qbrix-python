@@ -193,14 +193,6 @@ class TestAgentViaGRPC:
 
 
 class TestHTTPOnlyResourceGuards:
-    def test_auth_raises_on_grpc_transport(self, grpc_client) -> None:
-        from qbrix.resource.auth import AuthResource
-
-        resource = AuthResource(grpc_client)
-        with pytest.raises(NotImplementedError) as exc:
-            resource.list_api_keys()
-        assert "auth" in str(exc.value).lower()
-
     def test_policy_raises_on_grpc_transport(self, grpc_client) -> None:
         from qbrix.resource.policy import PolicyResource
 

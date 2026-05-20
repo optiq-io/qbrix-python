@@ -3,7 +3,6 @@ from qbrix.model.agent import FeedbackResponse
 from qbrix.model.agent import SelectedArm
 from qbrix.model.agent import SelectRequest
 from qbrix.model.agent import SelectResponse
-from qbrix.model.auth import APIKeyInfo
 from qbrix.model.common import Context
 from qbrix.model.common import PaginatedResponse
 from qbrix.model.experiment import Experiment
@@ -23,7 +22,6 @@ from qbrix.model.pool import PoolUpdate
 __all__ = [
     "Arm",
     "ArmCreate",
-    "APIKeyInfo",
     "Context",
     "Experiment",
     "ExperimentCreate",

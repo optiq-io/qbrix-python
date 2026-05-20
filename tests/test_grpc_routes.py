@@ -81,8 +81,6 @@ class TestRouteCoverage:
     @pytest.mark.parametrize(
         "path,resource",
         [
-            ("/api/auth/api-keys", "auth"),
-            ("/api/auth/api-keys/k1/rotate", "auth"),
             ("/api/v1/policies", "policy"),
             ("/api/v1/runtime/redis/health", "runtime"),
             ("/api/v1/runtime/motor/health", "runtime"),

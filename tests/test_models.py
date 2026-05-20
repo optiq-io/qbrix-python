@@ -6,7 +6,6 @@ from qbrix.model.agent import FeedbackRequest
 from qbrix.model.agent import SelectedArm
 from qbrix.model.agent import SelectRequest
 from qbrix.model.agent import SelectResponse
-from qbrix.model.auth import APIKeyInfo
 from qbrix.model.common import Context
 from qbrix.model.common import PaginatedResponse
 from qbrix.model.experiment import Experiment
@@ -189,18 +188,3 @@ class TestAgentModels:
     def test_feedback_request_int_reward(self) -> None:
         fr = FeedbackRequest(request_id="tok_abc", reward=1)
         assert fr.reward == 1
-
-
-@pytest.mark.unit
-class TestAPIKeyInfo:
-    def test_api_key_info(self) -> None:
-        info = APIKeyInfo(
-            id="k1",
-            name="My Key",
-            rate_limit_per_minute=100,
-            scopes=["agent:read", "agent:write"],
-            created_at=1700000000.0,
-            is_active=True,
-        )
-        assert info.last_used_at is None
-        assert len(info.scopes) == 2
