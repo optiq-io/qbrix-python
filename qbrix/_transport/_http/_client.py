@@ -18,6 +18,8 @@ import httpx
 from pydantic import BaseModel
 
 from qbrix._config import QbrixConfig
+from qbrix._transport._base import AsyncTransport
+from qbrix._transport._base import Transport
 from qbrix._version import __version__
 from qbrix.exception import QbrixAPIError
 from qbrix.exception import QbrixConnectionError
@@ -97,7 +99,7 @@ class BaseClient:
         return delay + random.uniform(0, delay * 0.1)
 
 
-class HTTPTransport(BaseClient):
+class HTTPTransport(BaseClient, Transport):
     """Synchronous HTTP transport. Implements the ``Transport`` protocol."""
 
     _client: httpx.Client
@@ -216,7 +218,7 @@ class HTTPTransport(BaseClient):
         self.close()
 
 
-class AsyncHTTPTransport(BaseClient):
+class AsyncHTTPTransport(BaseClient, AsyncTransport):
     """Asynchronous HTTP transport. Implements the ``AsyncTransport`` protocol."""
 
     _client: httpx.AsyncClient

@@ -21,6 +21,8 @@ from typing import TypeVar
 import grpc
 from pydantic import BaseModel
 
+from qbrix._transport._base import AsyncTransport
+from qbrix._transport._base import Transport
 from qbrix._transport._grpc._error import is_retryable
 from qbrix._transport._grpc._error import make_grpc_error
 from qbrix._transport._grpc._handlers import HANDLERS
@@ -103,7 +105,7 @@ def _finalize(
     return result if result is not None else {}
 
 
-class GRPCTransport(_BaseGRPCTransport):
+class GRPCTransport(_BaseGRPCTransport, Transport):
     """Synchronous gRPC transport."""
 
     _channel: grpc.Channel
@@ -205,7 +207,7 @@ class GRPCTransport(_BaseGRPCTransport):
         self.close()
 
 
-class AsyncGRPCTransport(_BaseGRPCTransport):
+class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
     """Asynchronous gRPC transport."""
 
     _channel: grpc.aio.Channel
