@@ -86,7 +86,7 @@ client = Qbrix(transport="grpc", base_url="grpcs://cloud.qbrix.io:443")
 
 When `transport` is omitted it's resolved in this order: the `transport=` kwarg → the `QBRIX_TRANSPORT` env var → the `base_url` scheme (`grpc://` / `grpcs://` → gRPC) → HTTP.
 
-The gRPC transport covers **pool, experiment, gate, and agent** operations. The `policy` and `runtime` resources are HTTP-only (the proxy doesn't expose them over gRPC) — calling them on a gRPC client raises `NotImplementedError`. Install `qbrix[all]` and use `transport="http"` if you need them.
+The gRPC transport covers **pool, experiment, gate, agent, and policy** operations. The `runtime` resource is HTTP-only (the proxy doesn't expose it over gRPC) — calling it on a gRPC client raises `NotImplementedError`. Install `qbrix[all]` and use `transport="http"` if you need it.
 
 ## Explicit Client
 

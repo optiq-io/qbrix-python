@@ -120,6 +120,11 @@ class ProxyServiceStub(object):
                 request_serializer=proxy__pb2.FeedbackRequest.SerializeToString,
                 response_deserializer=proxy__pb2.FeedbackResponse.FromString,
                 _registered_method=True)
+        self.ListPolicies = channel.unary_unary(
+                '/qbrix.proxy.ProxyService/ListPolicies',
+                request_serializer=proxy__pb2.ListPoliciesRequest.SerializeToString,
+                response_deserializer=proxy__pb2.ListPoliciesResponse.FromString,
+                _registered_method=True)
         self.Health = channel.unary_unary(
                 '/qbrix.proxy.ProxyService/Health',
                 request_serializer=common__pb2.HealthCheckRequest.SerializeToString,
@@ -232,6 +237,12 @@ class ProxyServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ListPolicies(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def Health(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -325,6 +336,11 @@ def add_ProxyServiceServicer_to_server(servicer, server):
                     servicer.Feedback,
                     request_deserializer=proxy__pb2.FeedbackRequest.FromString,
                     response_serializer=proxy__pb2.FeedbackResponse.SerializeToString,
+            ),
+            'ListPolicies': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListPolicies,
+                    request_deserializer=proxy__pb2.ListPoliciesRequest.FromString,
+                    response_serializer=proxy__pb2.ListPoliciesResponse.SerializeToString,
             ),
             'Health': grpc.unary_unary_rpc_method_handler(
                     servicer.Health,
@@ -791,6 +807,33 @@ class ProxyService(object):
             '/qbrix.proxy.ProxyService/Feedback',
             proxy__pb2.FeedbackRequest.SerializeToString,
             proxy__pb2.FeedbackResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListPolicies(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/qbrix.proxy.ProxyService/ListPolicies',
+            proxy__pb2.ListPoliciesRequest.SerializeToString,
+            proxy__pb2.ListPoliciesResponse.FromString,
             options,
             channel_credentials,
             insecure,

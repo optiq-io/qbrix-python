@@ -6,9 +6,8 @@ mirror the 1:1 mapping between HTTP routes in
 ``/Users/eskinmi/Dev/qbrix/svc/proxy/src/proxysvc/http/router/`` and RPCs in
 ``/Users/eskinmi/Dev/qbrix/proto/proxy.proto``.
 
-Paths outside this table (``/api/v1/policies``, ``/api/v1/runtime/*``) raise
-``NotImplementedError`` — they are HTTP-only because ``proxy.proto`` doesn't
-expose them.
+Paths outside this table (``/api/v1/runtime/*``) raise ``NotImplementedError``
+— they are HTTP-only because ``proxy.proto`` doesn't expose them.
 """
 
 from __future__ import annotations
@@ -57,15 +56,14 @@ ROUTES: tuple[Route, ...] = (
     # agent
     _r("POST", r"^/api/v1/agent/select$", "select"),
     _r("POST", r"^/api/v1/agent/feedback$", "feedback"),
+    # policies
+    _r("GET", r"^/api/v1/policies$", "list_policies"),
 )
 
 
 # Friendly names for the HTTP-only resource families. Used when raising
 # NotImplementedError to point users at the right install/transport.
-_HTTP_ONLY_PREFIXES: tuple[tuple[str, str], ...] = (
-    ("/api/v1/policies", "policy"),
-    ("/api/v1/runtime/", "runtime"),
-)
+_HTTP_ONLY_PREFIXES: tuple[tuple[str, str], ...] = (("/api/v1/runtime/", "runtime"),)
 
 
 class GRPCRouteNotImplementedError(NotImplementedError):

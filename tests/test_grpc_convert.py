@@ -8,6 +8,7 @@ from qbrix._transport._grpc import _convert as convert
 from qbrix._transport._grpc._proto import common_pb2
 from qbrix._transport._grpc._proto import proxy_pb2
 from qbrix.model.gate import GateConfig
+from qbrix.model.policy import Policy
 from qbrix.model.pool import Pool
 
 pytestmark = pytest.mark.grpc
@@ -164,3 +165,60 @@ class TestContextAndSelect:
         assert d["arm"] == {"id": "a1", "name": "winner", "index": 3}
         assert d["request_id"] == "req_xxx"
         assert d["is_default"] is False
+
+
+class TestPolicy:
+    def test_policy_to_dict_validates_into_pydantic(self) -> None:
+        from google.protobuf import struct_pb2
+
+        proto = proxy_pb2.Policy(
+            name="LinUCBPolicy",
+            category="contextual",
+            reward_types=["continuous"],
+            description="linear upper confidence bound",
+            user_params=[
+                proxy_pb2.PolicyParam(
+                    name="alpha",
+                    type="number",
+                    required=True,
+                    default=struct_pb2.Value(number_value=1.0),
+                    description="confidence width",
+                    constraints={"gt": 0.0},
+                ),
+                proxy_pb2.PolicyParam(
+                    name="dim",
+                    type="integer",
+                    required=True,
+                    description="context vector dimension",
+                ),
+            ],
+        )
+        d = convert.policy_to_dict(proto)
+        policy = Policy.model_validate(d)
+        assert policy.name == "LinUCBPolicy"
+        assert policy.category == "contextual"
+        assert policy.reward_types == ["continuous"]
+        assert policy.user_params[0].default == 1.0
+        assert policy.user_params[0].constraints == {"gt": 0.0}
+        # unset Value default → None
+        assert policy.user_params[1].default is None
+
+    def test_policy_to_dict_handles_string_and_null_defaults(self) -> None:
+        from google.protobuf import struct_pb2
+
+        proto = proxy_pb2.Policy(
+            name="P",
+            category="stochastic",
+            user_params=[
+                proxy_pb2.PolicyParam(
+                    name="mode", default=struct_pb2.Value(string_value="auto")
+                ),
+                proxy_pb2.PolicyParam(
+                    name="seed",
+                    default=struct_pb2.Value(null_value=struct_pb2.NULL_VALUE),
+                ),
+            ],
+        )
+        d = convert.policy_to_dict(proto)
+        assert d["user_params"][0]["default"] == "auto"
+        assert d["user_params"][1]["default"] is None

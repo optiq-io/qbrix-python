@@ -13,8 +13,9 @@ pytestmark = pytest.mark.grpc
 
 class TestRouteCoverage:
     def test_route_count_matches_proxy_proto_rpcs(self) -> None:
-        # proxy.proto exposes 17 unary RPCs (Health is HTTP-only on the SDK side).
-        assert len(ROUTES) == 17
+        # proxy.proto exposes 19 unary RPCs; the SDK routes 18 of them.
+        # Health has no resource, so it is not in the table.
+        assert len(ROUTES) == 18
 
     @pytest.mark.parametrize(
         "method,path,expected_handler,expected_params",
@@ -61,6 +62,7 @@ class TestRouteCoverage:
             ),
             ("POST", "/api/v1/agent/select", "select", {}),
             ("POST", "/api/v1/agent/feedback", "feedback", {}),
+            ("GET", "/api/v1/policies", "list_policies", {}),
         ],
     )
     def test_matching(
@@ -81,7 +83,6 @@ class TestRouteCoverage:
     @pytest.mark.parametrize(
         "path,resource",
         [
-            ("/api/v1/policies", "policy"),
             ("/api/v1/runtime/redis/health", "runtime"),
             ("/api/v1/runtime/motor/health", "runtime"),
         ],
