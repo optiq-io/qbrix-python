@@ -6,6 +6,7 @@ isort:skip_file
 from collections import abc as _abc
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
+from google.protobuf import struct_pb2 as _struct_pb2
 from google.protobuf.internal import containers as _containers
 import builtins as _builtins
 from qbrix._transport._grpc._proto import common_pb2 as _common_pb2
@@ -1024,3 +1025,142 @@ class FeedbackResponse(_message.Message):
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 
 Global___FeedbackResponse: _TypeAlias = FeedbackResponse  # noqa: Y015
+
+@_typing.final
+class ListPoliciesRequest(_message.Message):
+    """Policy introspection"""
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    REWARD_TYPE_FIELD_NUMBER: _builtins.int
+    reward_type: _builtins.str
+    """binary | bounded | continuous"""
+    def __init__(
+        self,
+        *,
+        reward_type: _builtins.str | None = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["_reward_type", b"_reward_type", "reward_type", b"reward_type"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["_reward_type", b"_reward_type", "reward_type", b"reward_type"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    _WhichOneofReturnType__reward_type: _TypeAlias = _typing.Literal["reward_type"]  # noqa: Y015
+    _WhichOneofArgType__reward_type: _TypeAlias = _typing.Literal["_reward_type", b"_reward_type"]  # noqa: Y015
+    def WhichOneof(self, oneof_group: _WhichOneofArgType__reward_type) -> _WhichOneofReturnType__reward_type | None: ...
+
+Global___ListPoliciesRequest: _TypeAlias = ListPoliciesRequest  # noqa: Y015
+
+@_typing.final
+class PolicyParam(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    @_typing.final
+    class ConstraintsEntry(_message.Message):
+        DESCRIPTOR: _descriptor.Descriptor
+
+        KEY_FIELD_NUMBER: _builtins.int
+        VALUE_FIELD_NUMBER: _builtins.int
+        key: _builtins.str
+        value: _builtins.float
+        def __init__(
+            self,
+            *,
+            key: _builtins.str = ...,
+            value: _builtins.float = ...,
+        ) -> None: ...
+        _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+        def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+        _ClearFieldArgType: _TypeAlias = _typing.Literal["key", b"key", "value", b"value"]  # noqa: Y015
+        def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+        def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+    NAME_FIELD_NUMBER: _builtins.int
+    TYPE_FIELD_NUMBER: _builtins.int
+    REQUIRED_FIELD_NUMBER: _builtins.int
+    DEFAULT_FIELD_NUMBER: _builtins.int
+    DESCRIPTION_FIELD_NUMBER: _builtins.int
+    CONSTRAINTS_FIELD_NUMBER: _builtins.int
+    name: _builtins.str
+    type: _builtins.str
+    """"integer" | "number" """
+    required: _builtins.bool
+    description: _builtins.str
+    @_builtins.property
+    def default(self) -> _struct_pb2.Value:
+        """default is Any|None -> Value"""
+
+    @_builtins.property
+    def constraints(self) -> _containers.ScalarMap[_builtins.str, _builtins.float]:
+        """gt | gte | lt | lte"""
+
+    def __init__(
+        self,
+        *,
+        name: _builtins.str = ...,
+        type: _builtins.str = ...,
+        required: _builtins.bool = ...,
+        default: _struct_pb2.Value | None = ...,
+        description: _builtins.str = ...,
+        constraints: _abc.Mapping[_builtins.str, _builtins.float] | None = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["default", b"default"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["constraints", b"constraints", "default", b"default", "description", b"description", "name", b"name", "required", b"required", "type", b"type"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___PolicyParam: _TypeAlias = PolicyParam  # noqa: Y015
+
+@_typing.final
+class Policy(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    NAME_FIELD_NUMBER: _builtins.int
+    CATEGORY_FIELD_NUMBER: _builtins.int
+    REWARD_TYPES_FIELD_NUMBER: _builtins.int
+    DESCRIPTION_FIELD_NUMBER: _builtins.int
+    USER_PARAMS_FIELD_NUMBER: _builtins.int
+    name: _builtins.str
+    category: _builtins.str
+    """stochastic | contextual | adversarial"""
+    description: _builtins.str
+    @_builtins.property
+    def reward_types(self) -> _containers.RepeatedScalarFieldContainer[_builtins.str]: ...
+    @_builtins.property
+    def user_params(self) -> _containers.RepeatedCompositeFieldContainer[Global___PolicyParam]: ...
+    def __init__(
+        self,
+        *,
+        name: _builtins.str = ...,
+        category: _builtins.str = ...,
+        reward_types: _abc.Iterable[_builtins.str] | None = ...,
+        description: _builtins.str = ...,
+        user_params: _abc.Iterable[Global___PolicyParam] | None = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["category", b"category", "description", b"description", "name", b"name", "reward_types", b"reward_types", "user_params", b"user_params"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___Policy: _TypeAlias = Policy  # noqa: Y015
+
+@_typing.final
+class ListPoliciesResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    POLICIES_FIELD_NUMBER: _builtins.int
+    @_builtins.property
+    def policies(self) -> _containers.RepeatedCompositeFieldContainer[Global___Policy]: ...
+    def __init__(
+        self,
+        *,
+        policies: _abc.Iterable[Global___Policy] | None = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["policies", b"policies"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___ListPoliciesResponse: _TypeAlias = ListPoliciesResponse  # noqa: Y015

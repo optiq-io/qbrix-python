@@ -63,7 +63,7 @@ Transport is chosen by `Qbrix(transport="http"|"grpc")`, falling back to the `QB
 Both transports satisfy the `Transport`/`AsyncTransport` protocol (`_transport/_base.py`) — an HTTP-shaped verb interface. Resources call `self._client.post("/api/v1/pools", ...)` and never know which wire format is active.
 
 - **HTTP** (`_transport/_http/_client.py`): httpx-based; retry loop, `_make_status_error`, header construction.
-- **gRPC** (`_transport/_grpc/`): `_routes.py` maps `(method, path)` → one of 17 `ProxyService` RPCs; `_handlers.py` builds proto requests + converts responses; `_convert.py` holds explicit proto↔dict converters; `_error.py` maps `grpc.StatusCode` → the same `QbrixAPIError` subclasses. Paths with no proto RPC (`/api/v1/policies`, `/api/v1/runtime/*`) raise `NotImplementedError` — those resources are HTTP-only.
+- **gRPC** (`_transport/_grpc/`): `_routes.py` maps `(method, path)` → one of 18 `ProxyService` RPCs; `_handlers.py` builds proto requests + converts responses; `_convert.py` holds explicit proto↔dict converters; `_error.py` maps `grpc.StatusCode` → the same `QbrixAPIError` subclasses. Paths with no proto RPC (`/api/v1/runtime/*`) raise `NotImplementedError` — those resources are HTTP-only.
 - **Vendored protos** (`_transport/_grpc/_proto/`): generated `*_pb2.py`/`.pyi` from `../qbrix/proto/{common,proxy}.proto`. Regenerate with `make proto` (or `bash bin/regen_protos.sh`); committed to git, never hand-edited.
 
 ### Resource Layer (`resource/`)
@@ -94,6 +94,7 @@ The SDK targets these proxy endpoints (all under `/api/v1`):
 - **Experiments:** `POST/GET/PATCH/DELETE /experiments[/{id}]` — supports `?search=&enabled=` filters
 - **Gates:** `POST/GET/PUT/DELETE /gates/{experiment_id}` — note: update is `PUT` (full replace), not `PATCH`
 - **Agent:** `POST /agent/select`, `POST /agent/feedback`
+- **Policies:** `GET /policies` — supports `?reward_type=` filter (read-only policy discovery)
 
 ### Supported Policies
 

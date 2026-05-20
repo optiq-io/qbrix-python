@@ -192,15 +192,57 @@ class TestAgentViaGRPC:
         assert dict(select_req.context.metadata) == {"plan": "pro"}
 
 
-class TestHTTPOnlyResourceGuards:
-    def test_policy_raises_on_grpc_transport(self, grpc_client) -> None:
+class TestPolicyViaGRPC:
+    def test_list_policies_filters_and_unwraps_default(self, grpc_client) -> None:
+        from google.protobuf import struct_pb2
+
+        grpc_client._stub.ListPolicies.return_value = proxy_pb2.ListPoliciesResponse(
+            policies=[
+                proxy_pb2.Policy(
+                    name="EpsilonPolicy",
+                    category="stochastic",
+                    reward_types=["binary", "bounded"],
+                    description="epsilon-greedy exploration",
+                    user_params=[
+                        proxy_pb2.PolicyParam(
+                            name="epsilon",
+                            type="number",
+                            required=False,
+                            default=struct_pb2.Value(number_value=0.1),
+                            description="exploration rate",
+                            constraints={"gte": 0.0, "lte": 1.0},
+                        ),
+                    ],
+                ),
+            ]
+        )
         from qbrix.resource.policy import PolicyResource
 
         resource = PolicyResource(grpc_client)
-        with pytest.raises(NotImplementedError) as exc:
-            resource.list()
-        assert "policy" in str(exc.value).lower()
+        policies = resource.list(reward_type="binary")
 
+        assert len(policies) == 1
+        policy = policies[0]
+        assert policy.name == "EpsilonPolicy"
+        assert policy.reward_types == ["binary", "bounded"]
+        # google.protobuf.Value default unwraps to a native scalar
+        assert policy.user_params[0].default == 0.1
+        assert policy.user_params[0].constraints == {"gte": 0.0, "lte": 1.0}
+
+        req = grpc_client._stub.ListPolicies.call_args.args[0]
+        assert req.HasField("reward_type")
+        assert req.reward_type == "binary"
+
+    def test_list_policies_without_filter_omits_reward_type(self, grpc_client) -> None:
+        grpc_client._stub.ListPolicies.return_value = proxy_pb2.ListPoliciesResponse()
+        from qbrix.resource.policy import PolicyResource
+
+        assert PolicyResource(grpc_client).list() == []
+        req = grpc_client._stub.ListPolicies.call_args.args[0]
+        assert not req.HasField("reward_type")
+
+
+class TestHTTPOnlyResourceGuards:
     def test_runtime_raises_on_grpc_transport(self, grpc_client) -> None:
         from qbrix.resource.runtime import RuntimeResource
 

@@ -107,6 +107,39 @@ def policy_params_to_struct(params: dict[str, Any]) -> struct_pb2.Struct:
     return s
 
 
+# ----- policies ---------------------------------------------------------------
+
+
+def _policy_param_to_dict(p: proxy_pb2.PolicyParam) -> dict[str, Any]:
+    return {
+        "name": p.name,
+        "type": p.type,
+        "required": p.required,
+        # ``default`` is a google.protobuf.Value (the param default is Any|None).
+        # MessageToDict unwraps the well-known type to a native scalar/None/list.
+        "default": (
+            json_format.MessageToDict(p.default) if p.HasField("default") else None
+        ),
+        "description": p.description,
+        "constraints": dict(p.constraints),
+    }
+
+
+def policy_to_dict(p: proxy_pb2.Policy) -> dict[str, Any]:
+    """Convert proto Policy → ``qbrix.model.Policy`` dict shape.
+
+    Mirrors ``_policy_to_proto`` in
+    ``/Users/eskinmi/Dev/qbrix/svc/proxy/src/proxysvc/server.py`` in reverse.
+    """
+    return {
+        "name": p.name,
+        "category": p.category,
+        "reward_types": list(p.reward_types),
+        "description": p.description,
+        "user_params": [_policy_param_to_dict(pp) for pp in p.user_params],
+    }
+
+
 # ----- gate config ------------------------------------------------------------
 
 
@@ -233,6 +266,7 @@ __all__ = [
     "gate_config_from_dict",
     "gate_config_to_dict",
     "policy_params_to_struct",
+    "policy_to_dict",
     "pool_to_dict",
     "select_response_to_dict",
 ]

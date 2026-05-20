@@ -22,6 +22,7 @@ from qbrix._transport._grpc._convert import experiment_to_dict
 from qbrix._transport._grpc._convert import gate_config_from_dict
 from qbrix._transport._grpc._convert import gate_config_to_dict
 from qbrix._transport._grpc._convert import policy_params_to_struct
+from qbrix._transport._grpc._convert import policy_to_dict
 from qbrix._transport._grpc._convert import pool_to_dict
 from qbrix._transport._grpc._convert import select_response_to_dict
 from qbrix._transport._grpc._proto import proxy_pb2
@@ -99,6 +100,15 @@ def _build_update_pool_request(
     req = proxy_pb2.UpdatePoolRequest(pool_id=pool_id)
     if body.get("name") is not None:
         req.name = body["name"]
+    return req
+
+
+def _build_list_policies_request(
+    params: dict[str, Any],
+) -> proxy_pb2.ListPoliciesRequest:
+    req = proxy_pb2.ListPoliciesRequest()
+    if params.get("reward_type") is not None:
+        req.reward_type = str(params["reward_type"])
     return req
 
 
@@ -245,6 +255,14 @@ HANDLERS: dict[str, Handler] = {
         ),
         stub_attr="Feedback",
         convert_response=lambda resp, pp: None,
+    ),
+    # ----- policies -----
+    "list_policies": Handler(
+        build_request=lambda body, params, pp: _build_list_policies_request(params),
+        stub_attr="ListPolicies",
+        convert_response=lambda resp, pp: {
+            "policies": [policy_to_dict(p) for p in resp.policies],
+        },
     ),
 }
 
