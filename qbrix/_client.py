@@ -9,8 +9,6 @@ from typing import TYPE_CHECKING
 from qbrix._config import QbrixConfig
 from qbrix.resource.agent import AgentResource
 from qbrix.resource.agent import AsyncAgentResource
-from qbrix.resource.auth import AsyncAuthResource
-from qbrix.resource.auth import AuthResource
 from qbrix.resource.experiment import AsyncExperimentResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import AsyncGateResource
@@ -194,10 +192,6 @@ class Qbrix:
         return PolicyResource(self)
 
     @cached_property
-    def auth(self) -> AuthResource:
-        return AuthResource(self)
-
-    @cached_property
     def runtime(self) -> RuntimeResource:
         return RuntimeResource(self)
 
@@ -284,10 +278,6 @@ class AsyncQbrix:
     @cached_property
     def policy(self) -> AsyncPolicyResource:
         return AsyncPolicyResource(self)
-
-    @cached_property
-    def auth(self) -> AsyncAuthResource:
-        return AsyncAuthResource(self)
 
     @cached_property
     def runtime(self) -> AsyncRuntimeResource:
