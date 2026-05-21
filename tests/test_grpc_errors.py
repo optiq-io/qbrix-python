@@ -15,6 +15,7 @@ from qbrix.exception import ForbiddenError
 from qbrix.exception import InternalServerError
 from qbrix.exception import NotFoundError
 from qbrix.exception import QbrixAPIError
+from qbrix.exception import QbrixConnectionError
 from qbrix.exception import QbrixTimeoutError
 from qbrix.exception import RateLimitedError
 from qbrix.exception import ServiceUnavailableError
@@ -99,6 +100,26 @@ class TestErrorMapping:
         exc = make_grpc_error(_FakeRpcError(grpc.StatusCode.CANCELLED, "cancelled"))
         assert type(exc) is QbrixAPIError
         assert exc.status_code == 500
+
+    def test_unimplemented_http_endpoint_gives_connection_hint(self) -> None:
+        # grpc-core's tell that base_url points at an HTTP endpoint, not gRPC.
+        exc = make_grpc_error(
+            _FakeRpcError(
+                grpc.StatusCode.UNIMPLEMENTED,
+                "Received http2 header with status: 404",
+            )
+        )
+        assert isinstance(exc, QbrixConnectionError)
+        assert "not gRPC" in str(exc)
+        assert "transport='http'" in str(exc)
+
+    def test_unimplemented_missing_method_maps_to_501(self) -> None:
+        # A real gRPC server that simply lacks the RPC.
+        exc = make_grpc_error(
+            _FakeRpcError(grpc.StatusCode.UNIMPLEMENTED, "Method not found")
+        )
+        assert type(exc) is QbrixAPIError
+        assert exc.status_code == 501
 
 
 class TestRetryability:
