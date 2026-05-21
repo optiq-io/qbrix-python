@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1](https://github.com/optiq-io/qbrix-python/compare/v0.2.0...v0.2.1) (2026-05-21)
+
+
+### Features
+
+* added unimplemented error to grpc transport ([9021820](https://github.com/optiq-io/qbrix-python/commit/9021820db7f99f0b4d65329d06aa39a1f32afb3a))
+* remove auth api / unused and broken ([b6a4eea](https://github.com/optiq-io/qbrix-python/commit/b6a4eea3a476ba5f633e3f52415f9b66e81a2eeb))
+* support the policy resource over the gRPC transport ([d6277f1](https://github.com/optiq-io/qbrix-python/commit/d6277f1bb3f6cd20aa9e7b806de48ec6afdd9d12))
+
 ## [0.2.0](https://github.com/optiq-io/qbrix-python/compare/v0.1.7...v0.2.0) (2026-05-19)
 
 
