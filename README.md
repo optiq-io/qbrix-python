@@ -77,14 +77,16 @@ The same `Qbrix` client, resources, and Pydantic models work over either wire fo
 ```python
 from qbrix import Qbrix
 
-# HTTP (default)
+# HTTP — the qbrix cloud API
 client = Qbrix(transport="http", base_url="https://cloud.qbrix.io")
 
-# gRPC
-client = Qbrix(transport="grpc", base_url="grpcs://cloud.qbrix.io:443")
+# gRPC — a directly-reachable proxy (local dev shown; or an in-cluster address)
+client = Qbrix(transport="grpc", base_url="grpc://localhost:50050")
 ```
 
 When `transport` is omitted it's resolved in this order: the `transport=` kwarg → the `QBRIX_TRANSPORT` env var → the `base_url` scheme (`grpc://` / `grpcs://` → gRPC) → HTTP.
+
+gRPC needs a directly-reachable proxy gRPC endpoint. The hosted cloud at `cloud.qbrix.io` is served over HTTPS behind a CDN and does **not** expose gRPC — use `transport="http"` for it. Reach for gRPC against a local proxy (`grpc://localhost:50050`) or a service deployed alongside the proxy.
 
 The gRPC transport covers **pool, experiment, gate, agent, and policy** operations. The `runtime` resource is HTTP-only (the proxy doesn't expose it over gRPC) — calling it on a gRPC client raises `NotImplementedError`. Install `qbrix[all]` and use `transport="http"` if you need it.
 

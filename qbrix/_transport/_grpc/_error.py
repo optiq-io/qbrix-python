@@ -80,6 +80,8 @@ def make_grpc_error(rpc_error: grpc.RpcError) -> Exception:
         - grpc.StatusCode.DEADLINE_EXCEEDED → QbrixTimeoutError
         - grpc.StatusCode.UNAVAILABLE w/ no useful code → QbrixConnectionError
           when the channel is uninitialized; otherwise ServiceUnavailableError
+        - grpc.StatusCode.UNIMPLEMENTED → QbrixConnectionError when the peer
+          replied with HTTP instead of gRPC (wrong base_url); else a 501 error
         - everything else → matching QbrixAPIError subclass, or generic
           QbrixAPIError if the status code is unknown.
     """
@@ -94,6 +96,20 @@ def make_grpc_error(rpc_error: grpc.RpcError) -> Exception:
 
     if code is grpc.StatusCode.DEADLINE_EXCEEDED:
         return QbrixTimeoutError(details or "deadline exceeded")
+
+    if code is grpc.StatusCode.UNIMPLEMENTED:
+        # grpc-core reports UNIMPLEMENTED with a "Received http2 header with
+        # status: NNN" detail when the peer answered with a plain HTTP response
+        # instead of gRPC — i.e. base_url points at an HTTP/REST server or a
+        # CDN/proxy that doesn't carry gRPC, not at a gRPC server.
+        if "Received http2 header with status" in details:
+            return QbrixConnectionError(
+                f"gRPC call failed: {details}. The endpoint replied with HTTP, "
+                "not gRPC — check base_url. gRPC needs a gRPC server address "
+                "(e.g. grpc://host:50050); an HTTP/REST URL or a CDN-fronted "
+                "host will not work. Use transport='http' for HTTP endpoints."
+            )
+        return QbrixAPIError(501, details or "RPC not implemented by the server", None)
 
     http_status = _GRPC_TO_HTTP_STATUS.get(code, 500) if code is not None else 500
     exc_cls = (
