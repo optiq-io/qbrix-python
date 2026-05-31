@@ -30,11 +30,11 @@ async def qbrix_select(params: SelectInput, ctx: Context) -> str:
         3. Observe the outcome (click, conversion, revenue, etc.)
         4. Call qbrix_feedback(request_id, reward) to close the learning loop
 
-    Note: is_default=true means the gate committed a specific arm. Feedback is still
-    accepted and tracked but does not affect arm weights.
+    is_default=true means the gate committed a specific arm — feedback is accepted
+    but does not affect arm weights.
 
-    Note: context_vector is required for contextual policies (LinUCBPolicy, LinTSPolicy).
-    Length must match the experiment's 'dim' policy param.
+    context_vector is required for contextual policies (LinUCBPolicy, LinTSPolicy);
+    length must match the experiment's 'dim' policy param.
 
     Returns:
         JSON with arm_name, arm_id, arm_index, request_id, is_default.
@@ -71,7 +71,7 @@ async def qbrix_feedback(params: FeedbackInput, ctx: Context) -> str:
     Call this after observing the outcome of a qbrix_select call. The reward teaches
     the bandit which arms perform better so future selections improve.
 
-    The request_id is an HMAC-signed token — pass it exactly as returned by qbrix_select.
+    The request_id is HMAC-signed — pass it exactly as returned by qbrix_select.
 
     Reward values by policy type:
         BetaTSPolicy (binary): 1.0 (success) or 0.0 (failure)

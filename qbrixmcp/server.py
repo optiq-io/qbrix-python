@@ -19,11 +19,11 @@ from mcp.server.fastmcp import Context
 from mcp.server.fastmcp import FastMCP
 
 from qbrix import AsyncQbrix
-from qbrixmcp._tools import discovery
-from qbrixmcp._tools import hotpath
-from qbrixmcp._tools import lifecycle
-from qbrixmcp._tools import monitoring
-from qbrixmcp._tools import setup
+from qbrixmcp._tools import agent
+from qbrixmcp._tools import experiment
+from qbrixmcp._tools import gate
+from qbrixmcp._tools import policy
+from qbrixmcp._tools import pool
 from qbrixmcp._utils import get_client
 
 logger = logging.getLogger(__name__)
@@ -40,11 +40,11 @@ async def lifespan(server: FastMCP):  # noqa: ARG001
 
 mcp = FastMCP("qbrix_mcp", lifespan=lifespan)
 
-discovery.register(mcp)
-setup.register(mcp)
-monitoring.register(mcp)
-lifecycle.register(mcp)
-hotpath.register(mcp)
+policy.register(mcp)
+pool.register(mcp)
+experiment.register(mcp)
+gate.register(mcp)
+agent.register(mcp)
 
 
 @mcp.resource("qbrix://policies")

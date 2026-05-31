@@ -36,24 +36,24 @@ from qbrixmcp._models import ResponseFormat
 from qbrixmcp._models import SelectInput
 from qbrixmcp._models import SetupExperimentInput
 from qbrixmcp._models import TuneExperimentInput
-from qbrixmcp._tools.discovery import qbrix_get_pool
-from qbrixmcp._tools.discovery import qbrix_list_experiments
-from qbrixmcp._tools.discovery import qbrix_list_policies
-from qbrixmcp._tools.discovery import qbrix_list_pools
-from qbrixmcp._tools.hotpath import qbrix_feedback
-from qbrixmcp._tools.hotpath import qbrix_select
-from qbrixmcp._tools.lifecycle import qbrix_delete_experiment
-from qbrixmcp._tools.lifecycle import qbrix_pause_experiment
-from qbrixmcp._tools.lifecycle import qbrix_remove_gate
-from qbrixmcp._tools.lifecycle import qbrix_resume_experiment
-from qbrixmcp._tools.lifecycle import qbrix_tune_experiment
-from qbrixmcp._tools.monitoring import qbrix_get_experiment
-from qbrixmcp._tools.monitoring import qbrix_get_gate
-from qbrixmcp._tools.monitoring import qbrix_get_stats
-from qbrixmcp._tools.setup import qbrix_configure_gate
-from qbrixmcp._tools.setup import qbrix_create_experiment_from_pool
-from qbrixmcp._tools.setup import qbrix_create_pool
-from qbrixmcp._tools.setup import qbrix_setup_experiment
+from qbrixmcp._tools.agent import qbrix_feedback
+from qbrixmcp._tools.agent import qbrix_select
+from qbrixmcp._tools.experiment import qbrix_create_experiment_from_pool
+from qbrixmcp._tools.experiment import qbrix_delete_experiment
+from qbrixmcp._tools.experiment import qbrix_get_experiment
+from qbrixmcp._tools.experiment import qbrix_get_stats
+from qbrixmcp._tools.experiment import qbrix_list_experiments
+from qbrixmcp._tools.experiment import qbrix_pause_experiment
+from qbrixmcp._tools.experiment import qbrix_resume_experiment
+from qbrixmcp._tools.experiment import qbrix_setup_experiment
+from qbrixmcp._tools.experiment import qbrix_tune_experiment
+from qbrixmcp._tools.gate import qbrix_configure_gate
+from qbrixmcp._tools.gate import qbrix_get_gate
+from qbrixmcp._tools.gate import qbrix_remove_gate
+from qbrixmcp._tools.policy import qbrix_list_policies
+from qbrixmcp._tools.pool import qbrix_create_pool
+from qbrixmcp._tools.pool import qbrix_get_pool
+from qbrixmcp._tools.pool import qbrix_list_pools
 
 
 # ---------------------------------------------------------------------------
