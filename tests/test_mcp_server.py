@@ -19,41 +19,41 @@ from qbrix.model.gate import GateConfig
 from qbrix.model.gate import GateRule
 from qbrix.model.pool import Arm
 from qbrix.model.pool import Pool
-from qbrixmcp.server import ResponseFormat
-from qbrixmcp.server import qbrix_configure_gate
-from qbrixmcp.server import qbrix_create_experiment_from_pool
-from qbrixmcp.server import qbrix_create_pool
-from qbrixmcp.server import qbrix_delete_experiment
-from qbrixmcp.server import qbrix_feedback
-from qbrixmcp.server import qbrix_get_experiment
-from qbrixmcp.server import qbrix_get_gate
-from qbrixmcp.server import qbrix_get_pool
-from qbrixmcp.server import qbrix_get_stats
-from qbrixmcp.server import qbrix_list_experiments
-from qbrixmcp.server import qbrix_list_policies
-from qbrixmcp.server import qbrix_list_pools
-from qbrixmcp.server import qbrix_pause_experiment
-from qbrixmcp.server import qbrix_remove_gate
-from qbrixmcp.server import qbrix_resume_experiment
-from qbrixmcp.server import qbrix_select
-from qbrixmcp.server import qbrix_setup_experiment
-from qbrixmcp.server import qbrix_tune_experiment
-from qbrixmcp.server import ConfigureGateInput
-from qbrixmcp.server import CreateExperimentFromPoolInput
-from qbrixmcp.server import CreatePoolInput
-from qbrixmcp.server import ExperimentIdInput
-from qbrixmcp.server import FeedbackInput
-from qbrixmcp.server import GetExperimentInput
-from qbrixmcp.server import GetGateInput
-from qbrixmcp.server import GetPoolInput
-from qbrixmcp.server import GetStatsInput
-from qbrixmcp.server import ListExperimentsInput
-from qbrixmcp.server import ListPoliciesInput
-from qbrixmcp.server import ListPoolsInput
-from qbrixmcp.server import ArmInput
-from qbrixmcp.server import SelectInput
-from qbrixmcp.server import SetupExperimentInput
-from qbrixmcp.server import TuneExperimentInput
+from qbrixmcp._models import ArmInput
+from qbrixmcp._models import ConfigureGateInput
+from qbrixmcp._models import CreateExperimentFromPoolInput
+from qbrixmcp._models import CreatePoolInput
+from qbrixmcp._models import ExperimentIdInput
+from qbrixmcp._models import FeedbackInput
+from qbrixmcp._models import GetExperimentInput
+from qbrixmcp._models import GetGateInput
+from qbrixmcp._models import GetPoolInput
+from qbrixmcp._models import GetStatsInput
+from qbrixmcp._models import ListExperimentsInput
+from qbrixmcp._models import ListPoliciesInput
+from qbrixmcp._models import ListPoolsInput
+from qbrixmcp._models import ResponseFormat
+from qbrixmcp._models import SelectInput
+from qbrixmcp._models import SetupExperimentInput
+from qbrixmcp._models import TuneExperimentInput
+from qbrixmcp._tools.discovery import qbrix_get_pool
+from qbrixmcp._tools.discovery import qbrix_list_experiments
+from qbrixmcp._tools.discovery import qbrix_list_policies
+from qbrixmcp._tools.discovery import qbrix_list_pools
+from qbrixmcp._tools.hotpath import qbrix_feedback
+from qbrixmcp._tools.hotpath import qbrix_select
+from qbrixmcp._tools.lifecycle import qbrix_delete_experiment
+from qbrixmcp._tools.lifecycle import qbrix_pause_experiment
+from qbrixmcp._tools.lifecycle import qbrix_remove_gate
+from qbrixmcp._tools.lifecycle import qbrix_resume_experiment
+from qbrixmcp._tools.lifecycle import qbrix_tune_experiment
+from qbrixmcp._tools.monitoring import qbrix_get_experiment
+from qbrixmcp._tools.monitoring import qbrix_get_gate
+from qbrixmcp._tools.monitoring import qbrix_get_stats
+from qbrixmcp._tools.setup import qbrix_configure_gate
+from qbrixmcp._tools.setup import qbrix_create_experiment_from_pool
+from qbrixmcp._tools.setup import qbrix_create_pool
+from qbrixmcp._tools.setup import qbrix_setup_experiment
 
 
 # ---------------------------------------------------------------------------
@@ -403,7 +403,7 @@ class TestConfigureGate:
         assert "permissions" in result
 
     async def test_rules_serialised(self) -> None:
-        from qbrixmcp.server import GateRuleInput
+        from qbrixmcp._models import GateRuleInput
 
         client = _make_client()
         client.gate.update.return_value = _gate()
