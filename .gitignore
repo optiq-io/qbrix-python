@@ -35,3 +35,12 @@ Thumbs.db
 
 # internal
 .internal
+
+# secrets — never commit
+.env
+.env.*
+*.cred
+*.cred.md
+*-cred.md
+*credentials*
+*secrets*
