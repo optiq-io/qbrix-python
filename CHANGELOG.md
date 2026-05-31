@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.2](https://github.com/optiq-io/qbrix-python/compare/v0.2.1...v0.2.2) (2026-05-31)
+
+
+### Features
+
+* updated the mcp implementation to V2 ([24a2809](https://github.com/optiq-io/qbrix-python/commit/24a280941673faea43de3a4b12b234b69193fa8b))
+
+
+### Bug Fixes
+
+* install mcp extra in dev deps so CI can import the mcp server ([a043377](https://github.com/optiq-io/qbrix-python/commit/a0433771c523282ed132a252af776f9348ffbbe1))
+
 ## [0.2.1](https://github.com/optiq-io/qbrix-python/compare/v0.2.0...v0.2.1) (2026-05-21)
 
 
