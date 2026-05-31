@@ -83,7 +83,7 @@ def _make_client() -> MagicMock:
 
 def _make_ctx(client: MagicMock) -> MagicMock:
     ctx = MagicMock()
-    ctx.request_context.lifespan_state = {"client": client}
+    ctx.request_context.lifespan_context = {"client": client}
     return ctx
 
 

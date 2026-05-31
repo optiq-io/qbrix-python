@@ -19,7 +19,7 @@ DESTRUCTIVE = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempote
 
 
 def get_client(ctx: Context) -> AsyncQbrix:
-    return ctx.request_context.lifespan_state["client"]
+    return ctx.request_context.lifespan_context["client"]
 
 
 def format_error(e: Exception) -> str:
