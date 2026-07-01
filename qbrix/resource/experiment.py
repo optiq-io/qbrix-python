@@ -81,6 +81,20 @@ class ExperimentResource(SyncAPIResource):
             cast_to=Experiment,
         )
 
+    def reset(self, experiment_id: str) -> Experiment:
+        """Reset an experiment's learned params back to its configured ``policy_params``.
+
+        The experiment must be paused first — the proxy returns ``409``
+        (:class:`~qbrix.exception.ConflictError`) if it is currently running.
+
+        Note: HTTP-only. There is no ``ResetExperiment`` RPC in ``proxy.proto``,
+        so this raises ``NotImplementedError`` on the gRPC transport.
+        """
+        return self._post(
+            f"/api/v1/experiments/{experiment_id}/reset",
+            cast_to=Experiment,
+        )
+
     def delete(self, experiment_id: str) -> None:
         self._delete(f"/api/v1/experiments/{experiment_id}")
 
@@ -168,6 +182,20 @@ class AsyncExperimentResource(AsyncAPIResource):
         return await self._patch(
             f"/api/v1/experiments/{experiment_id}",
             body=body,
+            cast_to=Experiment,
+        )
+
+    async def reset(self, experiment_id: str) -> Experiment:
+        """Reset an experiment's learned params back to its configured ``policy_params``.
+
+        The experiment must be paused first — the proxy returns ``409``
+        (:class:`~qbrix.exception.ConflictError`) if it is currently running.
+
+        Note: HTTP-only. There is no ``ResetExperiment`` RPC in ``proxy.proto``,
+        so this raises ``NotImplementedError`` on the gRPC transport.
+        """
+        return await self._post(
+            f"/api/v1/experiments/{experiment_id}/reset",
             cast_to=Experiment,
         )
 

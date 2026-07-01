@@ -166,6 +166,17 @@ class TestContextAndSelect:
         assert d["request_id"] == "req_xxx"
         assert d["is_default"] is False
 
+    def test_select_response_empty_request_id_becomes_none(self) -> None:
+        # Paused experiment mints no token; proto3 sends "" — normalize to None
+        # for parity with the HTTP transport (SelectResponse.request_id is optional).
+        resp = proxy_pb2.SelectResponse(
+            arm=common_pb2.Arm(id="a1", name="default", index=0),
+            request_id="",
+            is_default=True,
+        )
+        d = convert.select_response_to_dict(resp)
+        assert d["request_id"] is None
+
 
 class TestPolicy:
     def test_policy_to_dict_validates_into_pydantic(self) -> None:

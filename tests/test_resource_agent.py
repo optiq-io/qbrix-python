@@ -60,6 +60,23 @@ class TestAgentResource:
         result = resource.select("e1", {"id": "user-1"})
         assert result.is_default is True
 
+    def test_select_paused_experiment_null_request_id(
+        self, mock_client: MockSyncClient
+    ) -> None:
+        # A paused experiment mints no feedback token; the proxy returns
+        # request_id: null. The response must still parse.
+        mock_client.enqueue({**SELECT_RESPONSE, "request_id": None})
+        resource = AgentResource(mock_client)
+        result = resource.select("e1", {"id": "user-1"})
+        assert result.request_id is None
+
+    def test_select_missing_request_id(self, mock_client: MockSyncClient) -> None:
+        payload = {k: v for k, v in SELECT_RESPONSE.items() if k != "request_id"}
+        mock_client.enqueue(payload)
+        resource = AgentResource(mock_client)
+        result = resource.select("e1", {"id": "user-1"})
+        assert result.request_id is None
+
     def test_feedback(self, mock_client: MockSyncClient) -> None:
         mock_client.enqueue({})
         resource = AgentResource(mock_client)

@@ -105,6 +105,18 @@ class TestExperimentResource:
         call = mock_client.calls[0]
         assert call["json"] == {"policy_params": {"epsilon": 0.1}}
 
+    def test_reset(self, mock_client: MockSyncClient) -> None:
+        mock_client.enqueue(EXP_RESPONSE)
+        resource = ExperimentResource(mock_client)
+        exp = resource.reset("e1")
+
+        assert isinstance(exp, Experiment)
+        assert exp.id == "e1"
+        call = mock_client.calls[0]
+        assert call["method"] == "POST"
+        assert call["path"] == "/api/v1/experiments/e1/reset"
+        assert call["json"] is None
+
     def test_delete(self, mock_client: MockSyncClient) -> None:
         mock_client.enqueue({})
         resource = ExperimentResource(mock_client)
@@ -158,6 +170,16 @@ class TestAsyncExperimentResource:
         resource = AsyncExperimentResource(async_mock_client)
         exp = await resource.update("e1", enabled=False)
         assert exp.enabled is False
+
+    async def test_reset(self, async_mock_client: MockAsyncClient) -> None:
+        async_mock_client.enqueue(EXP_RESPONSE)
+        resource = AsyncExperimentResource(async_mock_client)
+        exp = await resource.reset("e1")
+
+        assert exp.id == "e1"
+        call = async_mock_client.calls[0]
+        assert call["method"] == "POST"
+        assert call["path"] == "/api/v1/experiments/e1/reset"
 
     async def test_delete(self, async_mock_client: MockAsyncClient) -> None:
         async_mock_client.enqueue({})
