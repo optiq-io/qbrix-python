@@ -18,7 +18,8 @@ class SelectedArm(BaseModel):
 
 class SelectResponse(BaseModel):
     arm: SelectedArm
-    request_id: str
+    # None when the experiment is paused — the proxy mints no feedback token.
+    request_id: str | None = None
     is_default: bool
 
 

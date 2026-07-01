@@ -252,7 +252,9 @@ def select_response_to_dict(r: proxy_pb2.SelectResponse) -> dict[str, Any]:
             "name": r.arm.name,
             "index": r.arm.index,
         },
-        "request_id": r.request_id,
+        # proto3 has no null; a paused experiment mints no token → empty string.
+        # Normalize to None for parity with the HTTP transport.
+        "request_id": r.request_id or None,
         "is_default": r.is_default,
     }
 
