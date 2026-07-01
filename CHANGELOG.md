@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/optiq-io/qbrix-python/compare/v0.2.2...v0.2.3) (2026-07-01)
+
+
+### Features
+
+* add experiment.reset() and make SelectResponse.request_id optional ([88325a7](https://github.com/optiq-io/qbrix-python/commit/88325a7098ee4f445dce05c5f204bb2a9ad0c48c))
+* add experiment.reset() and make SelectResponse.request_id optional ([5947d63](https://github.com/optiq-io/qbrix-python/commit/5947d63d0dcc066e083fbf966acc660d2e556157))
+
 ## [0.2.2](https://github.com/optiq-io/qbrix-python/compare/v0.2.1...v0.2.2) (2026-05-31)
 
 
