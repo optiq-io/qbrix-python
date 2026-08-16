@@ -52,6 +52,7 @@ ROUTES: tuple[Route, ...] = (
     _r("POST", r"^/api/v1/gates/(?P<experiment_id>[^/]+)$", "create_gate_config"),
     _r("GET", r"^/api/v1/gates/(?P<experiment_id>[^/]+)$", "get_gate_config"),
     _r("PUT", r"^/api/v1/gates/(?P<experiment_id>[^/]+)$", "update_gate_config"),
+    _r("PATCH", r"^/api/v1/gates/(?P<experiment_id>[^/]+)$", "patch_gate_config"),
     _r("DELETE", r"^/api/v1/gates/(?P<experiment_id>[^/]+)$", "delete_gate_config"),
     # agent
     _r("POST", r"^/api/v1/agent/select$", "select"),

@@ -14,8 +14,9 @@ pytestmark = pytest.mark.grpc
 class TestRouteCoverage:
     def test_route_count_matches_proxy_proto_rpcs(self) -> None:
         # proxy.proto exposes 19 unary RPCs; the SDK routes 18 of them.
-        # Health has no resource, so it is not in the table.
-        assert len(ROUTES) == 18
+        # Health has no resource, so it is not in the table. PATCH and PUT on a
+        # gate both reach UpdateGateConfig, which is the 19th route.
+        assert len(ROUTES) == 19
 
     @pytest.mark.parametrize(
         "method,path,expected_handler,expected_params",
@@ -54,6 +55,7 @@ class TestRouteCoverage:
             ("POST", "/api/v1/gates/e1", "create_gate_config", {"experiment_id": "e1"}),
             ("GET", "/api/v1/gates/e1", "get_gate_config", {"experiment_id": "e1"}),
             ("PUT", "/api/v1/gates/e1", "update_gate_config", {"experiment_id": "e1"}),
+            ("PATCH", "/api/v1/gates/e1", "patch_gate_config", {"experiment_id": "e1"}),
             (
                 "DELETE",
                 "/api/v1/gates/e1",
@@ -75,6 +77,30 @@ class TestRouteCoverage:
         handler, params = match(method, path)
         assert handler == expected_handler
         assert params == expected_params
+
+    def test_gate_patch_masks_only_the_supplied_fields(self) -> None:
+        """the mask is what carries presence — proto3 gives FeatureGateConfig's
+        scalars none, so without it the server cannot tell 50% from "unset"."""
+        pytest.importorskip("grpc")
+        from qbrix._transport._grpc._handlers import HANDLERS
+
+        req = HANDLERS["patch_gate_config"].build_request(
+            {"rollout_percentage": 50.0}, {}, {"experiment_id": "e1"}
+        )
+
+        assert req.experiment_id == "e1"
+        assert list(req.update_mask) == ["rollout_percentage"]
+        assert req.config.rollout_percentage == 50.0
+
+    def test_gate_put_sends_no_mask_so_the_server_replaces(self) -> None:
+        pytest.importorskip("grpc")
+        from qbrix._transport._grpc._handlers import HANDLERS
+
+        req = HANDLERS["update_gate_config"].build_request(
+            {"rollout_percentage": 50.0}, {}, {"experiment_id": "e1"}
+        )
+
+        assert list(req.update_mask) == []
 
     def test_case_insensitive_method(self) -> None:
         handler, _ = match("get", "/api/v1/pools")

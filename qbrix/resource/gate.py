@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from qbrix._util import NOT_GIVEN
+from qbrix._util import NotGiven
 from qbrix.resource._base import AsyncAPIResource
 from qbrix.resource._base import SyncAPIResource
 from qbrix.model.gate import GateConfig
@@ -44,6 +46,47 @@ def _build_gate_body(
     return body
 
 
+def _build_gate_patch(
+    *,
+    enabled: bool | NotGiven = NOT_GIVEN,
+    rollout_percentage: float | NotGiven = NOT_GIVEN,
+    default_arm_id: str | None | NotGiven = NOT_GIVEN,
+    schedule_start: str | None | NotGiven = NOT_GIVEN,
+    schedule_end: str | None | NotGiven = NOT_GIVEN,
+    active_hours_start: str | None | NotGiven = NOT_GIVEN,
+    active_hours_end: str | None | NotGiven = NOT_GIVEN,
+    timezone: str | NotGiven = NOT_GIVEN,
+    rules: list[GateRule | dict[str, Any]] | NotGiven = NOT_GIVEN,
+) -> dict[str, Any]:
+    """The supplied arguments only.
+
+    An omitted argument is absent from the body and left as stored; ``None`` is
+    transmitted and clears the field.
+    """
+    supplied = {
+        "enabled": enabled,
+        "rollout_percentage": rollout_percentage,
+        "default_arm_id": default_arm_id,
+        "schedule_start": schedule_start,
+        "schedule_end": schedule_end,
+        "active_hours_start": active_hours_start,
+        "active_hours_end": active_hours_end,
+        "timezone": timezone,
+        "rules": rules,
+    }
+    body = {k: v for k, v in supplied.items() if not isinstance(v, NotGiven)}
+    if not body:
+        raise ValueError(
+            "gate.update() needs at least one field to update; "
+            "use gate.get() to read the config or gate.delete() to remove it"
+        )
+    if not isinstance(rules, NotGiven):
+        body["rules"] = [
+            r.model_dump() if isinstance(r, GateRule) else r for r in rules
+        ]
+    return body
+
+
 class GateResource(SyncAPIResource):
     """synchronous gate operations."""
 
@@ -83,17 +126,25 @@ class GateResource(SyncAPIResource):
         self,
         experiment_id: str,
         *,
-        enabled: bool = True,
-        rollout_percentage: float = 100.0,
-        default_arm_id: str | None = None,
-        schedule_start: str | None = None,
-        schedule_end: str | None = None,
-        active_hours_start: str | None = None,
-        active_hours_end: str | None = None,
-        timezone: str = "UTC",
-        rules: list[GateRule | dict[str, Any]] | None = None,
+        enabled: bool | NotGiven = NOT_GIVEN,
+        rollout_percentage: float | NotGiven = NOT_GIVEN,
+        default_arm_id: str | None | NotGiven = NOT_GIVEN,
+        schedule_start: str | None | NotGiven = NOT_GIVEN,
+        schedule_end: str | None | NotGiven = NOT_GIVEN,
+        active_hours_start: str | None | NotGiven = NOT_GIVEN,
+        active_hours_end: str | None | NotGiven = NOT_GIVEN,
+        timezone: str | NotGiven = NOT_GIVEN,
+        rules: list[GateRule | dict[str, Any]] | NotGiven = NOT_GIVEN,
     ) -> GateConfig:
-        body = _build_gate_body(
+        """Update the fields you pass, leaving the rest of the gate as stored.
+
+        Raising a rollout is one argument::
+
+            client.gate.update(experiment_id, rollout_percentage=50.0)
+
+        Pass ``None`` to clear a field, and ``rules=[]`` to remove every rule.
+        """
+        body = _build_gate_patch(
             enabled=enabled,
             rollout_percentage=rollout_percentage,
             default_arm_id=default_arm_id,
@@ -104,7 +155,7 @@ class GateResource(SyncAPIResource):
             timezone=timezone,
             rules=rules,
         )
-        return self._put(
+        return self._patch(
             f"/api/v1/gates/{experiment_id}", body=body, cast_to=GateConfig
         )
 
@@ -151,17 +202,25 @@ class AsyncGateResource(AsyncAPIResource):
         self,
         experiment_id: str,
         *,
-        enabled: bool = True,
-        rollout_percentage: float = 100.0,
-        default_arm_id: str | None = None,
-        schedule_start: str | None = None,
-        schedule_end: str | None = None,
-        active_hours_start: str | None = None,
-        active_hours_end: str | None = None,
-        timezone: str = "UTC",
-        rules: list[GateRule | dict[str, Any]] | None = None,
+        enabled: bool | NotGiven = NOT_GIVEN,
+        rollout_percentage: float | NotGiven = NOT_GIVEN,
+        default_arm_id: str | None | NotGiven = NOT_GIVEN,
+        schedule_start: str | None | NotGiven = NOT_GIVEN,
+        schedule_end: str | None | NotGiven = NOT_GIVEN,
+        active_hours_start: str | None | NotGiven = NOT_GIVEN,
+        active_hours_end: str | None | NotGiven = NOT_GIVEN,
+        timezone: str | NotGiven = NOT_GIVEN,
+        rules: list[GateRule | dict[str, Any]] | NotGiven = NOT_GIVEN,
     ) -> GateConfig:
-        body = _build_gate_body(
+        """Update the fields you pass, leaving the rest of the gate as stored.
+
+        Raising a rollout is one argument::
+
+            client.gate.update(experiment_id, rollout_percentage=50.0)
+
+        Pass ``None`` to clear a field, and ``rules=[]`` to remove every rule.
+        """
+        body = _build_gate_patch(
             enabled=enabled,
             rollout_percentage=rollout_percentage,
             default_arm_id=default_arm_id,
@@ -172,7 +231,7 @@ class AsyncGateResource(AsyncAPIResource):
             timezone=timezone,
             rules=rules,
         )
-        return await self._put(
+        return await self._patch(
             f"/api/v1/gates/{experiment_id}", body=body, cast_to=GateConfig
         )
 

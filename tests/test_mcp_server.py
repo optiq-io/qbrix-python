@@ -55,10 +55,10 @@ from qbrixmcp._tools.pool import qbrix_create_pool
 from qbrixmcp._tools.pool import qbrix_get_pool
 from qbrixmcp._tools.pool import qbrix_list_pools
 
-
 # ---------------------------------------------------------------------------
 # fixtures & helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_client() -> MagicMock:
     """Build a mock AsyncQbrix with async-ready resource methods."""
@@ -88,7 +88,9 @@ def _make_ctx(client: MagicMock) -> MagicMock:
 
 
 def _arm(name: str, index: int = 0, arm_id: str | None = None) -> Arm:
-    return Arm(id=arm_id or f"arm-{index}", name=name, index=index, is_active=True, metadata={})
+    return Arm(
+        id=arm_id or f"arm-{index}", name=name, index=index, is_active=True, metadata={}
+    )
 
 
 def _pool(name: str = "test-pool", pool_id: str = "pool-1") -> Pool:
@@ -136,6 +138,7 @@ def _api_error(status: int, detail: str = "not found") -> QbrixAPIError:
 # ---------------------------------------------------------------------------
 # phase 1 — discovery & advisory
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
@@ -276,6 +279,7 @@ class TestGetPool:
 # phase 2 — setup
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestSetupExperiment:
@@ -397,10 +401,44 @@ class TestConfigureGate:
         client = _make_client()
         client.gate.update.side_effect = _api_error(403, "forbidden")
 
-        params = ConfigureGateInput(experiment_id="exp-1")
+        params = ConfigureGateInput(experiment_id="exp-1", rollout_percentage=50.0)
         result = await qbrix_configure_gate(params, _make_ctx(client))
         assert "error:" in result
         assert "permissions" in result
+
+    async def test_passes_only_the_fields_the_caller_supplied(self) -> None:
+        """regression (OPT-355): the tool used to send its own defaults for
+        rollout, rules and timezone, so adding one rule reset the rollout to
+        100% and dropped the default arm."""
+        client = _make_client()
+        client.gate.update.return_value = _gate(rollout=50.0)
+
+        params = ConfigureGateInput(experiment_id="exp-1", rollout_percentage=50.0)
+        await qbrix_configure_gate(params, _make_ctx(client))
+
+        _, kwargs = client.gate.update.call_args
+        assert kwargs == {"rollout_percentage": 50.0}
+
+    async def test_omitting_rules_does_not_send_an_empty_list(self) -> None:
+        client = _make_client()
+        client.gate.update.return_value = _gate()
+
+        params = ConfigureGateInput(experiment_id="exp-1", enabled=False)
+        await qbrix_configure_gate(params, _make_ctx(client))
+
+        _, kwargs = client.gate.update.call_args
+        assert "rules" not in kwargs
+        assert kwargs == {"enabled": False}
+
+    async def test_empty_configure_is_refused_before_the_call(self) -> None:
+        client = _make_client()
+
+        params = ConfigureGateInput(experiment_id="exp-1")
+        result = await qbrix_configure_gate(params, _make_ctx(client))
+
+        assert "error:" in result
+        client.gate.update.assert_not_called()
+        client.gate.create.assert_not_called()
 
     async def test_rules_serialised(self) -> None:
         from qbrixmcp._models import GateRuleInput
@@ -415,7 +453,9 @@ class TestConfigureGate:
         await qbrix_configure_gate(params, _make_ctx(client))
 
         _, kwargs = client.gate.update.call_args
-        assert kwargs["rules"] == [{"key": "plan", "operator": "eq", "value": "premium"}]
+        assert kwargs["rules"] == [
+            {"key": "plan", "operator": "eq", "value": "premium"}
+        ]
 
     async def test_json_format(self) -> None:
         client = _make_client()
@@ -435,6 +475,7 @@ class TestConfigureGate:
 # phase 3 — monitoring
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestGetExperiment:
@@ -451,7 +492,9 @@ class TestGetExperiment:
         client = _make_client()
         client.experiment.get.return_value = _experiment()
         result = await qbrix_get_experiment(
-            GetExperimentInput(experiment_id="exp-1", response_format=ResponseFormat.JSON),
+            GetExperimentInput(
+                experiment_id="exp-1", response_format=ResponseFormat.JSON
+            ),
             _make_ctx(client),
         )
         parsed = json.loads(result)
@@ -507,8 +550,20 @@ class TestGetStats:
             },
             {
                 "arms": [
-                    {"arm_index": 0, "arm_name": "control", "selections": 500, "feedback_count": 200, "avg_reward": 0.20},
-                    {"arm_index": 1, "arm_name": "variant", "selections": 500, "feedback_count": 200, "avg_reward": 0.30},
+                    {
+                        "arm_index": 0,
+                        "arm_name": "control",
+                        "selections": 500,
+                        "feedback_count": 200,
+                        "avg_reward": 0.20,
+                    },
+                    {
+                        "arm_index": 1,
+                        "arm_name": "variant",
+                        "selections": 500,
+                        "feedback_count": 200,
+                        "avg_reward": 0.30,
+                    },
                 ]
             },
         ]
@@ -558,8 +613,15 @@ class TestGetStats:
     async def test_json_format(self) -> None:
         client = _make_client()
         client.get.side_effect = [
-            {"total_selections": 5, "default_selections": 0, "total_feedback": 0,
-             "avg_reward": None, "unique_contexts": 0, "first_selection_ms": None, "last_selection_ms": None},
+            {
+                "total_selections": 5,
+                "default_selections": 0,
+                "total_feedback": 0,
+                "avg_reward": None,
+                "unique_contexts": 0,
+                "first_selection_ms": None,
+                "last_selection_ms": None,
+            },
             {"arms": []},
         ]
         result = await qbrix_get_stats(
@@ -574,6 +636,7 @@ class TestGetStats:
 # ---------------------------------------------------------------------------
 # phase 4 — action
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
@@ -643,6 +706,7 @@ class TestLifecycleTools:
 # ---------------------------------------------------------------------------
 # hot path — select / feedback
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
@@ -724,6 +788,7 @@ class TestSelectFeedback:
 # ---------------------------------------------------------------------------
 # power user — create pool
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio

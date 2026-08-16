@@ -232,6 +232,17 @@ HANDLERS: dict[str, Handler] = {
             resp.config, experiment_id=pp["experiment_id"]
         ),
     ),
+    "patch_gate_config": Handler(
+        build_request=lambda body, params, pp: proxy_pb2.UpdateGateConfigRequest(
+            experiment_id=pp["experiment_id"],
+            config=gate_config_from_dict(body),
+            update_mask=list(body),
+        ),
+        stub_attr="UpdateGateConfig",
+        convert_response=lambda resp, pp: gate_config_to_dict(
+            resp.config, experiment_id=pp["experiment_id"]
+        ),
+    ),
     "delete_gate_config": Handler(
         build_request=lambda body, params, pp: proxy_pb2.DeleteGateConfigRequest(
             experiment_id=pp["experiment_id"]

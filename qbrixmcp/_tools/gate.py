@@ -22,11 +22,16 @@ logger = logging.getLogger(__name__)
 
 
 async def qbrix_configure_gate(params: ConfigureGateInput, ctx: Context) -> str:
-    """Create or update (upsert) the feature gate for an experiment.
+    """Create or update the feature gate for an experiment.
 
     Controls who enters the experiment: rollout percentage caps total traffic,
     targeting rules route specific segments, and schedules restrict when the
-    experiment runs. Idempotent — call it whether or not a gate already exists.
+    experiment runs.
+
+    Only the arguments you pass are written — everything else on the gate is
+    left as it is. To raise a rollout, pass `rollout_percentage` alone; the
+    default arm, targeting rules and schedule are kept. If no gate exists yet,
+    one is created and the arguments you did not pass take their defaults.
 
     Gate rule examples:
         # Only premium users
@@ -38,52 +43,73 @@ async def qbrix_configure_gate(params: ConfigureGateInput, ctx: Context) -> str:
 
     Args:
         params.experiment_id: experiment to configure
-        params.rollout_percentage: % of traffic to include (default 100)
-        params.rules: targeting rules, first match wins
+        params.enabled: whether the gate is active
+        params.rollout_percentage: % of traffic to include
+        params.rules: targeting rules, first match wins — replaces the whole list
         params.schedule_start/end: ISO 8601 datetimes for active window
         params.active_hours_start/end: HH:MM daily window
         params.default_arm_id: arm for users excluded by the gate
-        params.timezone: for schedule and active hours (default UTC)
+        params.timezone: for schedule and active hours
     """
     try:
         client = get_client(ctx)
         logger.info(
-            "configure_gate experiment_id=%s rollout=%s rules=%d",
-            params.experiment_id, params.rollout_percentage, len(params.rules),
+            "configure_gate experiment_id=%s rollout=%s rules=%s",
+            params.experiment_id,
+            params.rollout_percentage,
+            "unchanged" if params.rules is None else len(params.rules),
         )
 
-        rules_data = [r.model_dump(exclude_none=True) for r in params.rules]
-        gate_kwargs: dict[str, Any] = dict(
-            rollout_percentage=params.rollout_percentage,
-            rules=rules_data,
-            timezone=params.timezone,
-        )
-        if params.schedule_start is not None:
-            gate_kwargs["schedule_start"] = params.schedule_start
-        if params.schedule_end is not None:
-            gate_kwargs["schedule_end"] = params.schedule_end
-        if params.active_hours_start is not None:
-            gate_kwargs["active_hours_start"] = params.active_hours_start
-        if params.active_hours_end is not None:
-            gate_kwargs["active_hours_end"] = params.active_hours_end
-        if params.default_arm_id is not None:
-            gate_kwargs["default_arm_id"] = params.default_arm_id
+        gate_kwargs: dict[str, Any] = {}
+        for name in (
+            "enabled",
+            "rollout_percentage",
+            "schedule_start",
+            "schedule_end",
+            "active_hours_start",
+            "active_hours_end",
+            "default_arm_id",
+            "timezone",
+        ):
+            value = getattr(params, name)
+            if value is not None:
+                gate_kwargs[name] = value
+        if params.rules is not None:
+            gate_kwargs["rules"] = [
+                r.model_dump(exclude_none=True) for r in params.rules
+            ]
+
+        if not gate_kwargs:
+            return format_error(
+                ValueError(
+                    "nothing to configure — pass at least one gate field, or use "
+                    "qbrix_get_gate to read the current configuration"
+                )
+            )
 
         try:
             gate = await client.gate.update(params.experiment_id, **gate_kwargs)
         except QbrixAPIError as api_err:
             if api_err.status_code == 404:
                 gate = await client.gate.create(params.experiment_id, **gate_kwargs)
-                logger.info("gate created (upsert) experiment_id=%s", params.experiment_id)
+                logger.info("gate created experiment_id=%s", params.experiment_id)
             else:
                 raise
 
         if params.response_format == ResponseFormat.JSON:
             return gate.model_dump_json(indent=2)
 
-        return "\n".join([f"# Gate Configured: experiment `{params.experiment_id}`", "", fmt_gate(gate)])
+        return "\n".join(
+            [
+                f"# Gate Configured: experiment `{params.experiment_id}`",
+                "",
+                fmt_gate(gate),
+            ]
+        )
     except Exception as e:
-        logger.error("configure_gate experiment_id=%s failed: %s", params.experiment_id, e)
+        logger.error(
+            "configure_gate experiment_id=%s failed: %s", params.experiment_id, e
+        )
         return format_error(e)
 
 
@@ -101,12 +127,14 @@ async def qbrix_get_gate(params: GetGateInput, ctx: Context) -> str:
         if params.response_format == ResponseFormat.JSON:
             return gate.model_dump_json(indent=2)
 
-        return "\n".join([
-            f"# Gate: experiment `{params.experiment_id}`",
-            f"*Last updated: {gate.updated_at or 'unknown'}  |  Version: {gate.version}*",
-            "",
-            fmt_gate(gate),
-        ])
+        return "\n".join(
+            [
+                f"# Gate: experiment `{params.experiment_id}`",
+                f"*Last updated: {gate.updated_at or 'unknown'}  |  Version: {gate.version}*",
+                "",
+                fmt_gate(gate),
+            ]
+        )
     except Exception as e:
         logger.error("get_gate experiment_id=%s failed: %s", params.experiment_id, e)
         return format_error(e)
@@ -133,6 +161,8 @@ async def qbrix_remove_gate(params: ExperimentIdInput, ctx: Context) -> str:
 
 
 def register(mcp: FastMCP) -> None:
-    mcp.tool(name="qbrix_configure_gate", annotations=WRITE_IDEMPOTENT)(qbrix_configure_gate)
+    mcp.tool(name="qbrix_configure_gate", annotations=WRITE_IDEMPOTENT)(
+        qbrix_configure_gate
+    )
     mcp.tool(name="qbrix_get_gate", annotations=READ_ONLY)(qbrix_get_gate)
     mcp.tool(name="qbrix_remove_gate", annotations=WRITE)(qbrix_remove_gate)
