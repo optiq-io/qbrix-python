@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/optiq-io/qbrix-python/compare/v0.2.4...v0.2.5) (2026-08-16)
+
+
+### Bug Fixes
+
+* gate.update sends only the fields you pass (OPT-355) ([fe27ffa](https://github.com/optiq-io/qbrix-python/commit/fe27ffa30c62b9f63776cf0f5eb541fe0c67cf99))
+
 ## [0.2.4](https://github.com/optiq-io/qbrix-python/compare/v0.2.3...v0.2.4) (2026-08-16)
 
 
