@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.4](https://github.com/optiq-io/qbrix-python/compare/v0.2.3...v0.2.4) (2026-08-16)
+
+
+### Documentation
+
+* **examples:** runnable scripts backing the use-case docs (OPT-350) ([543d5ba](https://github.com/optiq-io/qbrix-python/commit/543d5ba816bd8d44bcf18f7286f16fb87673e8ca))
+* **examples:** runnable scripts backing the use-case docs (OPT-350) ([157d9dd](https://github.com/optiq-io/qbrix-python/commit/157d9dd76eda6ea5d926295b666b487104c8d5e9))
+
 ## [0.2.3](https://github.com/optiq-io/qbrix-python/compare/v0.2.2...v0.2.3) (2026-07-01)
 
 
