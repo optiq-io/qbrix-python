@@ -111,17 +111,22 @@ class ConfigureGateInput(BaseModel):
     model_config = _BASE
 
     experiment_id: str = Field(..., min_length=1)
-    rollout_percentage: float = Field(
-        default=100.0,
+    enabled: bool | None = Field(default=None, description="whether the gate is active. Omit to leave as is.")
+    rollout_percentage: float | None = Field(
+        default=None,
         ge=0.0,
         le=100.0,
-        description="percentage of traffic included (0–100). Users outside rollout see the default arm.",
+        description=(
+            "percentage of traffic included (0–100). Users outside rollout see the default arm. "
+            "Omit to leave as is."
+        ),
     )
-    rules: list[GateRuleInput] = Field(
-        default_factory=list,
+    rules: list[GateRuleInput] | None = Field(
+        default=None,
         description=(
             "targeting rules, evaluated in order — first match wins. "
-            "e.g. [{\"key\": \"plan\", \"operator\": \"eq\", \"value\": \"premium\"}]"
+            "e.g. [{\"key\": \"plan\", \"operator\": \"eq\", \"value\": \"premium\"}]. "
+            "Replaces the whole list — omit to keep the stored rules, pass [] to remove them."
         ),
     )
     schedule_start: str | None = Field(default=None, description="ISO 8601 datetime — inactive before this time")
@@ -129,7 +134,7 @@ class ConfigureGateInput(BaseModel):
     active_hours_start: str | None = Field(default=None, description="HH:MM daily start e.g. '09:00'")
     active_hours_end: str | None = Field(default=None, description="HH:MM daily end e.g. '17:00'")
     default_arm_id: str | None = Field(default=None, description="arm served to users excluded by the gate")
-    timezone: str = Field(default="UTC", description="timezone e.g. 'America/New_York'")
+    timezone: str | None = Field(default=None, description="timezone e.g. 'America/New_York'. Omit to leave as is.")
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
 
 
