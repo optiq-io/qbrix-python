@@ -186,9 +186,13 @@ class SelectInput(BaseModel):
         min_length=1,
         description="stable identifier for the entity being served (user ID, session ID)",
     )
+    context_properties: dict[str, Any] | None = Field(
+        default=None,
+        description="named properties for contextual policies e.g. {\"device\": \"mobile\", \"cart_value\": 62.5}. Encoded server-side against the experiment's declared context_schema.",
+    )
     context_vector: list[float] | None = Field(
         default=None,
-        description="feature vector for contextual policies (LinUCBPolicy, LinTSPolicy). Length must match 'dim' policy param.",
+        description="pre-encoded feature vector. Only for experiments created without a context_schema; length must match the 'dim' policy param. Prefer context_properties.",
     )
     context_metadata: dict[str, Any] | None = Field(
         default=None,

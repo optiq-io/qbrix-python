@@ -153,6 +153,32 @@ class TestContextAndSelect:
         assert ctx.id == "u1"
         assert list(ctx.vector) == [pytest.approx(0.1), pytest.approx(0.2)]
         assert dict(ctx.metadata) == {"plan": "pro"}
+        assert not ctx.HasField("properties")
+
+    def test_context_properties_keep_their_types(self) -> None:
+        # the whole reason properties travel as a Struct rather than the
+        # string map: cart_value is declared numeric server-side, so a
+        # flattened "62.5" would fail encoding.
+        ctx = convert.context_from_dict(
+            {
+                "id": "u2",
+                "properties": {
+                    "device": "mobile",
+                    "cart_value": 62.5,
+                    "returning": True,
+                },
+            }
+        )
+        assert ctx.HasField("properties")
+        assert ctx.properties["cart_value"] == pytest.approx(62.5)
+        assert ctx.properties.fields["cart_value"].WhichOneof("kind") == "number_value"
+        assert ctx.properties.fields["returning"].WhichOneof("kind") == "bool_value"
+        assert ctx.properties["device"] == "mobile"
+        # properties-only: the vector stays empty rather than being invented
+        assert list(ctx.vector) == []
+
+    def test_context_without_properties_leaves_field_unset(self) -> None:
+        assert not convert.context_from_dict({"id": "u3"}).HasField("properties")
 
     def test_select_response_flattens_arm(self) -> None:
         resp = proxy_pb2.SelectResponse(

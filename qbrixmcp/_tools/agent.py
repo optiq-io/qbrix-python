@@ -33,8 +33,10 @@ async def qbrix_select(params: SelectInput, ctx: Context) -> str:
     is_default=true means the gate committed a specific arm — feedback is accepted
     but does not affect arm weights.
 
-    context_vector is required for contextual policies (LinUCBPolicy, LinTSPolicy);
-    length must match the experiment's 'dim' policy param.
+    Contextual policies (LinUCBPolicy, LinTSPolicy) need features per selection.
+    Pass context_properties and the server encodes them against the experiment's
+    declared context_schema; context_vector is the escape hatch for experiments
+    created without one.
 
     Returns:
         JSON with arm_name, arm_id, arm_index, request_id, is_default.
@@ -44,6 +46,8 @@ async def qbrix_select(params: SelectInput, ctx: Context) -> str:
         logger.debug("select experiment_id=%s context_id=%s", params.experiment_id, params.context_id)
 
         context: dict[str, Any] = {"id": params.context_id}
+        if params.context_properties is not None:
+            context["properties"] = params.context_properties
         if params.context_vector is not None:
             context["vector"] = params.context_vector
         if params.context_metadata is not None:

@@ -104,7 +104,6 @@ def main() -> None:
                     experiment.id,
                     context=Context(
                         id=f"user-{user_seq:04d}",
-                        vector=[],
                         metadata={"country": "TR", "device": "ios"}
                     ),
                 )

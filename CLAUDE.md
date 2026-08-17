@@ -100,7 +100,11 @@ The SDK targets these proxy endpoints (all under `/api/v1`):
 
 Experiment `policy` field values (must match exactly): `BetaTSPolicy`, `GaussianTSPolicy`, `UCB1TunedPolicy`, `KLUCBPolicy`, `EpsilonPolicy`, `MOSSPolicy`, `MOSSAnyTimePolicy`, `LinUCBPolicy`, `LinTSPolicy`, `EXP3Policy`, `FPLPolicy`.
 
-Contextual policies (`LinUCBPolicy`, `LinTSPolicy`) require `context.vector` with length matching the `dim` policy param.
+Contextual policies (`LinUCBPolicy`, `LinTSPolicy`) need features per selection. Declare a
+`context_schema` in `policy_params` at creation and send `context.properties` — the proxy encodes
+them and derives `dim` from the schema. `context.vector` is the escape hatch for an experiment
+created without a schema; the two are mutually exclusive and `Context` rejects both together
+locally.
 
 ### Agent Select/Feedback Loop
 
