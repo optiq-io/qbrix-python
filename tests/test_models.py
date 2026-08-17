@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from qbrix.model.agent import FeedbackRequest
 from qbrix.model.agent import SelectedArm
@@ -26,6 +27,7 @@ class TestContext:
     def test_minimal(self) -> None:
         ctx = Context(id="user-1")
         assert ctx.id == "user-1"
+        assert ctx.properties is None
         assert ctx.vector is None
         assert ctx.metadata is None
 
@@ -34,10 +36,42 @@ class TestContext:
         assert ctx.vector == [0.1, 0.5]
         assert ctx.metadata == {"plan": "pro"}
 
+    def test_properties(self) -> None:
+        ctx = Context(id="u-4", properties={"device": "mobile", "price": 20})
+        assert ctx.properties == {"device": "mobile", "price": 20}
+        assert ctx.vector is None
+
+    def test_properties_preserve_value_types(self) -> None:
+        # the server encodes a numeric property against a declared range, so
+        # the SDK must not coerce 20 to "20" on the way in.
+        ctx = Context(id="u-5", properties={"price": 20, "returning": True})
+        assert ctx.properties["price"] == 20
+        assert isinstance(ctx.properties["price"], int)
+        assert ctx.properties["returning"] is True
+
+    def test_vector_and_properties_together_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="not both"):
+            Context(id="u-6", vector=[0.1], properties={"device": "mobile"})
+
+    def test_properties_with_metadata_is_fine(self) -> None:
+        # metadata targets the gate, properties feed the strategy — different
+        # channels, no conflict.
+        ctx = Context(
+            id="u-7", properties={"device": "mobile"}, metadata={"plan": "pro"}
+        )
+        assert ctx.properties == {"device": "mobile"}
+        assert ctx.metadata == {"plan": "pro"}
+
+    def test_field_order_leads_with_properties(self) -> None:
+        # the escape hatch comes last so an editor completes the encouraged
+        # path first; mirrors the proxy's ContextModel.
+        assert list(Context.model_fields) == ["id", "properties", "metadata", "vector"]
+
     def test_exclude_none_serialization(self) -> None:
         ctx = Context(id="u-3")
         dumped = ctx.model_dump(exclude_none=True)
         assert "vector" not in dumped
+        assert "properties" not in dumped
         assert "metadata" not in dumped
 
 

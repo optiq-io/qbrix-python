@@ -748,6 +748,28 @@ class TestSelectFeedback:
         assert kwargs["context"]["vector"] == [0.1, 0.2]
         assert kwargs["context"]["metadata"] == {"plan": "premium"}
 
+    async def test_select_passes_properties(self) -> None:
+        client = _make_client()
+        client.agent.select.return_value = SelectResponse(
+            arm=SelectedArm(id="arm-0", name="control", index=0),
+            request_id="req-xyz",
+            is_default=False,
+        )
+        await qbrix_select(
+            SelectInput(
+                experiment_id="exp-1",
+                context_id="user-2",
+                context_properties={"device": "mobile", "cart_value": 62.5},
+            ),
+            _make_ctx(client),
+        )
+        _, kwargs = client.agent.select.call_args
+        assert kwargs["context"]["properties"] == {
+            "device": "mobile",
+            "cart_value": 62.5,
+        }
+        assert "vector" not in kwargs["context"]
+
     async def test_select_omits_vector_if_none(self) -> None:
         client = _make_client()
         client.agent.select.return_value = SelectResponse(
@@ -761,6 +783,7 @@ class TestSelectFeedback:
         )
         _, kwargs = client.agent.select.call_args
         assert "vector" not in kwargs["context"]
+        assert "properties" not in kwargs["context"]
         assert "metadata" not in kwargs["context"]
 
     async def test_feedback_calls_sdk(self) -> None:

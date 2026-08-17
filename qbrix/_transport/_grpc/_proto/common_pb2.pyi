@@ -47,21 +47,34 @@ class Context(_message.Message):
     ID_FIELD_NUMBER: _builtins.int
     VECTOR_FIELD_NUMBER: _builtins.int
     METADATA_FIELD_NUMBER: _builtins.int
+    PROPERTIES_FIELD_NUMBER: _builtins.int
     id: _builtins.str
     @_builtins.property
-    def vector(self) -> _containers.RepeatedScalarFieldContainer[_builtins.float]: ...
+    def vector(self) -> _containers.RepeatedScalarFieldContainer[_builtins.float]:
+        """pre-encoded feature vector. escape hatch for callers holding their own
+        embeddings; prefer `properties` and let qbrix own the encoding.
+        """
+
     @_builtins.property
     def metadata(self) -> _containers.ScalarMap[_builtins.str, _builtins.str]: ...
+    @_builtins.property
+    def properties(self) -> _struct_pb2.Struct:
+        """named request properties, encoded server-side against the experiment's
+        declared context schema. Struct rather than a string map so a number
+        stays a number.
+        """
+
     def __init__(
         self,
         *,
         id: _builtins.str = ...,
         vector: _abc.Iterable[_builtins.float] | None = ...,
         metadata: _abc.Mapping[_builtins.str, _builtins.str] | None = ...,
+        properties: _struct_pb2.Struct | None = ...,
     ) -> None: ...
-    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    _HasFieldArgType: _TypeAlias = _typing.Literal["properties", b"properties"]  # noqa: Y015
     def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["id", b"id", "metadata", b"metadata", "vector", b"vector"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["id", b"id", "metadata", b"metadata", "properties", b"properties", "vector", b"vector"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 

@@ -24,9 +24,9 @@ async def qbrix_list_policies(params: ListPoliciesInput, ctx: Context) -> str:
 
     Policy categories:
     - stochastic: BetaTSPolicy (binary), GaussianTSPolicy (continuous), UCB1TunedPolicy,
-      KLUCBPolicy, EpsilonPolicy, MOSSPolicy — no context vector required
-    - contextual: LinUCBPolicy, LinTSPolicy — require context.vector per selection,
-      length must match the experiment's 'dim' policy param
+      KLUCBPolicy, EpsilonPolicy, MOSSPolicy — no per-selection features
+    - contextual: LinUCBPolicy, LinTSPolicy — need features per selection, sent as
+      context.properties against the experiment's declared context_schema
     - adversarial: EXP3Policy, FPLPolicy — robust to non-stationary environments
     - auto: qbrix selects and tunes a policy automatically (MetaBandit)
 

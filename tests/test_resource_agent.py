@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from qbrix.model.agent import SelectResponse
 from qbrix.model.common import Context
@@ -53,6 +54,38 @@ class TestAgentResource:
 
         call = mock_client.calls[0]
         assert call["json"]["context"]["vector"] == [0.1, 0.5, 0.8]
+
+    def test_select_with_properties(self, mock_client: MockSyncClient) -> None:
+        mock_client.enqueue(SELECT_RESPONSE)
+        resource = AgentResource(mock_client)
+        ctx = Context(id="user-4", properties={"device": "mobile", "price": 20})
+        resource.select("e1", ctx)
+
+        call = mock_client.calls[0]
+        assert call["json"]["context"]["properties"] == {
+            "device": "mobile",
+            "price": 20,
+        }
+        assert "vector" not in call["json"]["context"]
+
+    def test_select_with_properties_dict(self, mock_client: MockSyncClient) -> None:
+        mock_client.enqueue(SELECT_RESPONSE)
+        resource = AgentResource(mock_client)
+        resource.select("e1", {"id": "user-5", "properties": {"device": "desktop"}})
+
+        call = mock_client.calls[0]
+        assert call["json"]["context"]["properties"] == {"device": "desktop"}
+
+    def test_select_dict_hits_the_same_guard(self, mock_client: MockSyncClient) -> None:
+        # a raw dict is validated through Context, so dict callers — the mcp
+        # server, the examples — get the local error too rather than a 400.
+        resource = AgentResource(mock_client)
+        with pytest.raises(ValidationError, match="not both"):
+            resource.select(
+                "e1",
+                {"id": "user-6", "vector": [0.1], "properties": {"device": "mobile"}},
+            )
+        assert mock_client.calls == []
 
     def test_select_default_arm(self, mock_client: MockSyncClient) -> None:
         mock_client.enqueue({**SELECT_RESPONSE, "is_default": True})

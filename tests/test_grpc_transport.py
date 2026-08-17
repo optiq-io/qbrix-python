@@ -10,6 +10,7 @@ import grpc
 
 from qbrix._transport._grpc._proto import common_pb2
 from qbrix._transport._grpc._proto import proxy_pb2
+from qbrix.model.common import Context
 from qbrix.model.experiment import Experiment
 from qbrix.model.gate import GateConfig
 from qbrix.model.pool import Pool
@@ -190,6 +191,31 @@ class TestAgentViaGRPC:
         assert select_req.experiment_id == "e_abc"
         assert select_req.context.id == "u_1"
         assert dict(select_req.context.metadata) == {"plan": "pro"}
+
+    def test_select_with_properties(self, grpc_client) -> None:
+        grpc_client._stub.Select.return_value = proxy_pb2.SelectResponse(
+            arm=common_pb2.Arm(id="a2", name="express", index=1),
+            request_id="req_signed_ctx",
+            is_default=False,
+        )
+        from qbrix.resource.agent import AgentResource
+
+        resource = AgentResource(grpc_client)
+        result = resource.select(
+            "e_ctx",
+            Context(
+                id="visitor-1", properties={"device": "mobile", "cart_value": 62.5}
+            ),
+        )
+        assert result.arm.name == "express"
+
+        select_req = grpc_client._stub.Select.call_args.args[0]
+        assert select_req.context.HasField("properties")
+        assert select_req.context.properties["cart_value"] == pytest.approx(62.5)
+        assert select_req.context.properties["device"] == "mobile"
+        # a properties-only context must not put an empty vector on the wire in
+        # a way the server could read as both channels being supplied
+        assert list(select_req.context.vector) == []
 
 
 class TestPolicyViaGRPC:

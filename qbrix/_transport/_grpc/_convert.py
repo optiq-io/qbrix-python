@@ -238,11 +238,17 @@ def gate_config_from_dict(body: dict[str, Any]) -> proxy_pb2.FeatureGateConfig:
 
 def context_from_dict(ctx: dict[str, Any]) -> common_pb2.Context:
     metadata = ctx.get("metadata") or {}
-    return common_pb2.Context(
+    context = common_pb2.Context(
         id=ctx.get("id", ""),
         vector=list(ctx.get("vector") or []),
         metadata={k: str(v) for k, v in metadata.items()},
     )
+    # Struct, not the string map: the server encodes a numeric property against
+    # a declared range, so 20 has to stay 20 rather than arriving as "20".
+    properties = ctx.get("properties")
+    if properties:
+        context.properties.update(properties)
+    return context
 
 
 def select_response_to_dict(r: proxy_pb2.SelectResponse) -> dict[str, Any]:

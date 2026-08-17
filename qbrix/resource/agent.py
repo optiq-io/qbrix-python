@@ -9,9 +9,11 @@ from qbrix.model.common import Context
 
 
 def _build_context(context: Context | dict[str, Any]) -> dict[str, Any]:
-    if isinstance(context, Context):
-        return context.model_dump(exclude_none=True)
-    return context
+    # dicts go through the model too, so a raw-dict caller gets the same
+    # validation as a typed one — notably the vector/properties guard.
+    if not isinstance(context, Context):
+        context = Context.model_validate(context)
+    return context.model_dump(exclude_none=True)
 
 
 class AgentResource(SyncAPIResource):
