@@ -5,11 +5,12 @@ transports and asserts the Pydantic objects coming out match. Hits the proxy
 on http://localhost:8080 and localhost:50050.
 
 The second leg is contextual: one experiment with a declared context_schema,
-created over HTTP and selected against by both transports. On gRPC the
-properties travel as a protobuf Struct, and a successful select is itself the
-proof that the types survived — cart_value is declared numeric, so had the
-Struct flattened it to a string the server's encoder would have rejected the
-call.
+created over gRPC and selected against by both transports. Both halves are a
+Struct round trip. The create carries the schema itself — a list of objects the
+old map<string,string> field could only str() — and the selects carry the
+properties, where a successful call is itself the proof that the types survived:
+cart_value is declared numeric, so had the Struct flattened it to a string the
+server's encoder would have rejected it.
 
 Usage:
     QBRIX_API_KEY=optiq_xxx python bin/smoke_dual_transport.py
@@ -79,9 +80,10 @@ def _create_experiment(client: Qbrix, pool_id: str, suffix: str) -> Experiment:
 def _create_contextual(client: Qbrix) -> tuple[Pool, Experiment]:
     """a pool + experiment with a declared context schema.
 
-    Created over HTTP only, and selected against by both transports: the gRPC
-    CreateExperimentRequest carries policy_params as map<string,string>, so a
-    schema (a list of dicts) arrives str()-ed and fails to parse. See OPT-399.
+    The create is the regression guard for OPT-399: policy_params travels as a
+    Struct, so the schema arrives as a list of objects rather than a repr of
+    one. LinUCBPolicy rather than "auto" because the gRPC servicer has no
+    meta-experiment branch — see the follow-up filed alongside OPT-399.
     """
     pool = client.pool.create(
         name=f"smoke-ctx-{RUN_ID}",
@@ -90,8 +92,8 @@ def _create_contextual(client: Qbrix) -> tuple[Pool, Experiment]:
     exp = client.experiment.create(
         name=f"smoke-ctx-exp-{RUN_ID}",
         pool_id=pool.id,
-        policy="auto",
-        policy_params={"reward_type": "binary", "context_schema": CONTEXT_SCHEMA},
+        policy="LinUCBPolicy",
+        policy_params={"alpha": 1.5, "context_schema": CONTEXT_SCHEMA},
         enabled=True,
     )
     # dim is derived from the schema, never sent — assert the server did that.
@@ -179,15 +181,15 @@ def main() -> int:
             # same schema, same arms, so the results are genuinely comparable.
             # created last so it never overlaps the round trips: the free tier
             # caps active experiments at 3.
-            ctx_pool, ctx_exp = _create_contextual(http_client)
+            ctx_pool, ctx_exp = _create_contextual(grpc_client)
             try:
                 print("\n=== HTTP · context.properties ===")
                 http_result.update(_contextual_leg(http_client, ctx_exp.id))
                 print("\n=== gRPC · context.properties ===")
                 grpc_result.update(_contextual_leg(grpc_client, ctx_exp.id))
             finally:
-                http_client.experiment.delete(ctx_exp.id)
-                http_client.pool.delete(ctx_pool.id)
+                grpc_client.experiment.delete(ctx_exp.id)
+                grpc_client.pool.delete(ctx_pool.id)
 
     print("\n=== Parity check ===")
     for key in (
