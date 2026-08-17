@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.7](https://github.com/optiq-io/qbrix-python/compare/v0.2.6...v0.2.7) (2026-08-17)
+
+
+### Features
+
+* **grpc:** send policy_params as a Struct, not a string map (OPT-399) ([a706894](https://github.com/optiq-io/qbrix-python/commit/a70689421d349d31b589f6fb44c9d1a49cc4bedb))
+
 ## [0.2.6](https://github.com/optiq-io/qbrix-python/compare/v0.2.5...v0.2.6) (2026-08-17)
 
 
