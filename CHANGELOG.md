@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.6](https://github.com/optiq-io/qbrix-python/compare/v0.2.5...v0.2.6) (2026-08-17)
+
+
+### Features
+
+* send context.properties on both transports (OPT-388) ([28d1c90](https://github.com/optiq-io/qbrix-python/commit/28d1c9049b1902bb5f9246947269f3e2c94aa3bc))
+* send context.properties on both transports (OPT-388) ([1a37650](https://github.com/optiq-io/qbrix-python/commit/1a37650bbfef7143c9d82cee23acc15038ec7793))
+
 ## [0.2.5](https://github.com/optiq-io/qbrix-python/compare/v0.2.4...v0.2.5) (2026-08-16)
 
 
