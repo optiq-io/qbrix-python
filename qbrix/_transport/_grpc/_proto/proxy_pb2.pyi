@@ -296,15 +296,25 @@ class CreateExperimentRequest(_message.Message):
     POLICY_PARAMS_FIELD_NUMBER: _builtins.int
     ENABLED_FIELD_NUMBER: _builtins.int
     FEATURE_GATE_FIELD_NUMBER: _builtins.int
+    POLICY_PARAMS_JSON_FIELD_NUMBER: _builtins.int
     name: _builtins.str
     pool_id: _builtins.str
     policy: _builtins.str
     enabled: _builtins.bool
     @_builtins.property
-    def policy_params(self) -> _containers.ScalarMap[_builtins.str, _builtins.str]: ...
+    def policy_params(self) -> _containers.ScalarMap[_builtins.str, _builtins.str]:
+        """deprecated: use policy_params_json"""
+
     @_builtins.property
     def feature_gate(self) -> Global___FeatureGateConfig:
         """Feature gate config"""
+
+    @_builtins.property
+    def policy_params_json(self) -> _struct_pb2.Struct:
+        """full-fidelity policy params. the string map above cannot carry a
+        context_schema (a list of objects) — it arrives str()-ed and fails to
+        parse. set this and the map is ignored.
+        """
 
     def __init__(
         self,
@@ -315,10 +325,11 @@ class CreateExperimentRequest(_message.Message):
         policy_params: _abc.Mapping[_builtins.str, _builtins.str] | None = ...,
         enabled: _builtins.bool = ...,
         feature_gate: Global___FeatureGateConfig | None = ...,
+        policy_params_json: _struct_pb2.Struct | None = ...,
     ) -> None: ...
-    _HasFieldArgType: _TypeAlias = _typing.Literal["feature_gate", b"feature_gate"]  # noqa: Y015
+    _HasFieldArgType: _TypeAlias = _typing.Literal["feature_gate", b"feature_gate", "policy_params_json", b"policy_params_json"]  # noqa: Y015
     def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["enabled", b"enabled", "feature_gate", b"feature_gate", "name", b"name", "policy", b"policy", "policy_params", b"policy_params", "pool_id", b"pool_id"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["enabled", b"enabled", "feature_gate", b"feature_gate", "name", b"name", "policy", b"policy", "policy_params", b"policy_params", "policy_params_json", b"policy_params_json", "pool_id", b"pool_id"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 
@@ -562,12 +573,19 @@ class UpdateExperimentRequest(_message.Message):
     ENABLED_FIELD_NUMBER: _builtins.int
     POLICY_PARAMS_FIELD_NUMBER: _builtins.int
     FEATURE_GATE_FIELD_NUMBER: _builtins.int
+    POLICY_PARAMS_JSON_FIELD_NUMBER: _builtins.int
     experiment_id: _builtins.str
     enabled: _builtins.bool
     @_builtins.property
-    def policy_params(self) -> _containers.ScalarMap[_builtins.str, _builtins.str]: ...
+    def policy_params(self) -> _containers.ScalarMap[_builtins.str, _builtins.str]:
+        """deprecated: use policy_params_json"""
+
     @_builtins.property
     def feature_gate(self) -> Global___FeatureGateConfig: ...
+    @_builtins.property
+    def policy_params_json(self) -> _struct_pb2.Struct:
+        """full-fidelity policy params"""
+
     def __init__(
         self,
         *,
@@ -575,10 +593,11 @@ class UpdateExperimentRequest(_message.Message):
         enabled: _builtins.bool | None = ...,
         policy_params: _abc.Mapping[_builtins.str, _builtins.str] | None = ...,
         feature_gate: Global___FeatureGateConfig | None = ...,
+        policy_params_json: _struct_pb2.Struct | None = ...,
     ) -> None: ...
-    _HasFieldArgType: _TypeAlias = _typing.Literal["_enabled", b"_enabled", "_feature_gate", b"_feature_gate", "enabled", b"enabled", "feature_gate", b"feature_gate"]  # noqa: Y015
+    _HasFieldArgType: _TypeAlias = _typing.Literal["_enabled", b"_enabled", "_feature_gate", b"_feature_gate", "enabled", b"enabled", "feature_gate", b"feature_gate", "policy_params_json", b"policy_params_json"]  # noqa: Y015
     def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["_enabled", b"_enabled", "_feature_gate", b"_feature_gate", "enabled", b"enabled", "experiment_id", b"experiment_id", "feature_gate", b"feature_gate", "policy_params", b"policy_params"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["_enabled", b"_enabled", "_feature_gate", b"_feature_gate", "enabled", b"enabled", "experiment_id", b"experiment_id", "feature_gate", b"feature_gate", "policy_params", b"policy_params", "policy_params_json", b"policy_params_json"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
     _WhichOneofReturnType__enabled: _TypeAlias = _typing.Literal["enabled"]  # noqa: Y015
     _WhichOneofArgType__enabled: _TypeAlias = _typing.Literal["_enabled", b"_enabled"]  # noqa: Y015

@@ -59,9 +59,9 @@ def _build_create_experiment_request(
         policy=body.get("policy", ""),
         enabled=body.get("enabled", True),
     )
-    # The proto field is map<string,string>; coerce values to strings.
-    for k, v in (body.get("policy_params") or {}).items():
-        req.policy_params[k] = str(v)
+    params = body.get("policy_params") or {}
+    if params:
+        req.policy_params_json.CopyFrom(policy_params_to_struct(params))
     if body.get("feature_gate") is not None:
         req.feature_gate.CopyFrom(gate_config_from_dict(body["feature_gate"]))
     return req
@@ -73,8 +73,9 @@ def _build_update_experiment_request(
     req = proxy_pb2.UpdateExperimentRequest(experiment_id=experiment_id)
     if "enabled" in body and body["enabled"] is not None:
         req.enabled = body["enabled"]
-    for k, v in (body.get("policy_params") or {}).items():
-        req.policy_params[k] = str(v)
+    params = body.get("policy_params") or {}
+    if params:
+        req.policy_params_json.CopyFrom(policy_params_to_struct(params))
     if body.get("feature_gate") is not None:
         req.feature_gate.CopyFrom(gate_config_from_dict(body["feature_gate"]))
     return req
@@ -276,11 +277,6 @@ HANDLERS: dict[str, Handler] = {
         },
     ),
 }
-
-
-# Silence unused-import warning — kept so policy_params_to_struct is reachable for
-# future use (currently unused because CreateExperimentRequest only has map<str,str>).
-_ = policy_params_to_struct
 
 
 __all__ = ["HANDLERS", "Handler"]
