@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.8](https://github.com/optiq-io/qbrix-python/compare/v0.2.7...v0.2.8) (2026-08-19)
+
+
+### Bug Fixes
+
+* close SDK/proxy drift found by the sync audit ([c843a2f](https://github.com/optiq-io/qbrix-python/commit/c843a2fd32d587dfead0707f5e1f53a45bb34c64))
+* close SDK/proxy drift found by the sync audit ([aba0a1a](https://github.com/optiq-io/qbrix-python/commit/aba0a1a99c6833f30bf49084fe21fdc0bc3298d0))
+
 ## [0.2.7](https://github.com/optiq-io/qbrix-python/compare/v0.2.6...v0.2.7) (2026-08-17)
 
 
