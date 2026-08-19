@@ -25,7 +25,13 @@ _T = TypeVar("_T", bound=BaseModel)
 
 @runtime_checkable
 class Transport(Protocol):
-    """Synchronous transport for the qbrix SDK."""
+    """Synchronous transport for the qbrix SDK.
+
+    ``timeout``/``max_retries`` on every verb override the client-level
+    ``QbrixConfig`` defaults for that one call — hot-path callers (e.g.
+    ``agent.select``) can ask for a tight budget without touching every
+    other request the client makes.
+    """
 
     def request(
         self,
@@ -35,6 +41,8 @@ class Transport(Protocol):
         body: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
     def get(
@@ -43,6 +51,8 @@ class Transport(Protocol):
         *,
         cast_to: type[_T] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
     def post(
@@ -51,6 +61,8 @@ class Transport(Protocol):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
     def put(
@@ -59,6 +71,8 @@ class Transport(Protocol):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
     def patch(
@@ -67,9 +81,17 @@ class Transport(Protocol):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
-    def delete(self, path: str) -> None: ...
+    def delete(
+        self,
+        path: str,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> None: ...
 
     def close(self) -> None: ...
 
@@ -86,6 +108,8 @@ class AsyncTransport(Protocol):
         body: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
     async def get(
@@ -94,6 +118,8 @@ class AsyncTransport(Protocol):
         *,
         cast_to: type[_T] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
     async def post(
@@ -102,6 +128,8 @@ class AsyncTransport(Protocol):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
     async def put(
@@ -110,6 +138,8 @@ class AsyncTransport(Protocol):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
     async def patch(
@@ -118,8 +148,16 @@ class AsyncTransport(Protocol):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]: ...
 
-    async def delete(self, path: str) -> None: ...
+    async def delete(
+        self,
+        path: str,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> None: ...
 
     async def close(self) -> None: ...

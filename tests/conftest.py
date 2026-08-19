@@ -42,9 +42,16 @@ class MockSyncClient(SyncAPIClient):
         *,
         json: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: Any = None,
     ) -> httpx.Response:
         self._calls.append(
-            {"method": method, "path": path, "json": json, "params": params}
+            {
+                "method": method,
+                "path": path,
+                "json": json,
+                "params": params,
+                "timeout": timeout,
+            }
         )
         if self._call_index < len(self._responses):
             status, data = self._responses[self._call_index]
@@ -79,9 +86,16 @@ class MockAsyncClient(AsyncAPIClient):
         *,
         json: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: Any = None,
     ) -> httpx.Response:
         self._calls.append(
-            {"method": method, "path": path, "json": json, "params": params}
+            {
+                "method": method,
+                "path": path,
+                "json": json,
+                "params": params,
+                "timeout": timeout,
+            }
         )
         if self._call_index < len(self._responses):
             status, data = self._responses[self._call_index]

@@ -139,10 +139,27 @@ client = Qbrix()  # picks up env vars automatically
 | `QBRIX_API_KEY` | `None` | API key (`optiq_xxx`) |
 | `QBRIX_BASE_URL` | `http://localhost:8080` | Proxy service URL |
 | `QBRIX_TRANSPORT` | _(auto)_ | `http` or `grpc` — overrides URL-scheme detection |
-| `QBRIX_TIMEOUT` | `30.0` | Request timeout / gRPC deadline (seconds) |
-| `QBRIX_MAX_RETRIES` | `2` | Retry count on transient failures (429/5xx, gRPC `UNAVAILABLE`) |
+| `QBRIX_TIMEOUT` | `5.0` | Request timeout / gRPC deadline (seconds) |
+| `QBRIX_MAX_RETRIES` | `0` | Retry count on transient failures (429/5xx, gRPC `UNAVAILABLE`) |
 
 gRPC-only knobs: `QBRIX_GRPC_KEEPALIVE_TIME_MS` (`30000`), `QBRIX_GRPC_KEEPALIVE_TIMEOUT_MS` (`10000`), `QBRIX_GRPC_USE_TLS` (`false`).
+
+`timeout` and `max_retries` can also be overridden per call on every resource method — useful for
+hot-path calls like `agent.select()` that need a tighter budget than the rest of the client:
+
+```python
+result = qbrix.agent.select(
+    experiment_id=exp.id,
+    context={"id": "user-1"},
+    timeout=0.3,
+    max_retries=0,
+    fallback={"id": pool.arms[0].id, "name": pool.arms[0].name, "index": pool.arms[0].index},
+)
+if result.is_fallback:
+    # proxy was unreachable/unhealthy — arm was resolved locally, no learning signal
+    ...
+qbrix.agent.feedback(result.request_id, reward=1.0)  # no-op when request_id is None
+```
 
 ## Feature Gates
 

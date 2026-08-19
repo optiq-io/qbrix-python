@@ -159,8 +159,8 @@ class Qbrix:
     def patch(self, *args: Any, **kwargs: Any) -> Any:
         return self._transport.patch(*args, **kwargs)
 
-    def delete(self, path: str) -> None:
-        self._transport.delete(path)
+    def delete(self, path: str, **kwargs: Any) -> None:
+        self._transport.delete(path, **kwargs)
 
     def close(self) -> None:
         self._transport.close()
@@ -247,8 +247,8 @@ class AsyncQbrix:
     async def patch(self, *args: Any, **kwargs: Any) -> Any:
         return await self._transport.patch(*args, **kwargs)
 
-    async def delete(self, path: str) -> None:
-        await self._transport.delete(path)
+    async def delete(self, path: str, **kwargs: Any) -> None:
+        await self._transport.delete(path, **kwargs)
 
     async def close(self) -> None:
         await self._transport.close()
