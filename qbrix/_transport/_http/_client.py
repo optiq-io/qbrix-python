@@ -149,14 +149,22 @@ class HTTPTransport(BaseClient, Transport):
         body: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
         last_exc: QbrixAPIError | None = None
-        max_attempts = self._config.max_retries + 1
+        effective_max_retries = (
+            max_retries if max_retries is not None else self._config.max_retries
+        )
+        effective_timeout = timeout if timeout is not None else httpx.USE_CLIENT_DEFAULT
+        max_attempts = effective_max_retries + 1
 
         for attempt in range(max_attempts):
             _log.debug("%s %s attempt=%d/%d", method, path, attempt + 1, max_attempts)
             try:
-                response = self._client.request(method, path, json=body, params=params)
+                response = self._client.request(
+                    method, path, json=body, params=params, timeout=effective_timeout
+                )
             except httpx.ConnectError as exc:
                 raise QbrixConnectionError(str(exc)) from exc
             except httpx.TimeoutException as exc:
@@ -174,7 +182,7 @@ class HTTPTransport(BaseClient, Transport):
 
             last_exc = self._make_status_error(response)
 
-            if attempt < self._config.max_retries:
+            if attempt < effective_max_retries:
                 delay = self._calculate_retry_delay(attempt, last_exc)
                 _log.debug(
                     "%s %s retrying in %.2fs (attempt %d/%d)",
@@ -182,7 +190,7 @@ class HTTPTransport(BaseClient, Transport):
                     path,
                     delay,
                     attempt + 1,
-                    self._config.max_retries,
+                    effective_max_retries,
                 )
                 time.sleep(delay)
 
@@ -198,8 +206,17 @@ class HTTPTransport(BaseClient, Transport):
         *,
         cast_to: type[_T] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self.request("GET", path, cast_to=cast_to, params=params)
+        return self.request(
+            "GET",
+            path,
+            cast_to=cast_to,
+            params=params,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     def post(
         self,
@@ -207,8 +224,17 @@ class HTTPTransport(BaseClient, Transport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self.request("POST", path, body=body, cast_to=cast_to)
+        return self.request(
+            "POST",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     def put(
         self,
@@ -216,8 +242,17 @@ class HTTPTransport(BaseClient, Transport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self.request("PUT", path, body=body, cast_to=cast_to)
+        return self.request(
+            "PUT",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     def patch(
         self,
@@ -225,11 +260,26 @@ class HTTPTransport(BaseClient, Transport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self.request("PATCH", path, body=body, cast_to=cast_to)
+        return self.request(
+            "PATCH",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
-    def delete(self, path: str) -> None:
-        self.request("DELETE", path)
+    def delete(
+        self,
+        path: str,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> None:
+        self.request("DELETE", path, timeout=timeout, max_retries=max_retries)
 
     def close(self) -> None:
         self._client.close()
@@ -268,15 +318,21 @@ class AsyncHTTPTransport(BaseClient, AsyncTransport):
         body: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
         last_exc: QbrixAPIError | None = None
-        max_attempts = self._config.max_retries + 1
+        effective_max_retries = (
+            max_retries if max_retries is not None else self._config.max_retries
+        )
+        effective_timeout = timeout if timeout is not None else httpx.USE_CLIENT_DEFAULT
+        max_attempts = effective_max_retries + 1
 
         for attempt in range(max_attempts):
             _log.debug("%s %s attempt=%d/%d", method, path, attempt + 1, max_attempts)
             try:
                 response = await self._client.request(
-                    method, path, json=body, params=params
+                    method, path, json=body, params=params, timeout=effective_timeout
                 )
             except httpx.ConnectError as exc:
                 raise QbrixConnectionError(str(exc)) from exc
@@ -295,7 +351,7 @@ class AsyncHTTPTransport(BaseClient, AsyncTransport):
 
             last_exc = self._make_status_error(response)
 
-            if attempt < self._config.max_retries:
+            if attempt < effective_max_retries:
                 delay = self._calculate_retry_delay(attempt, last_exc)
                 _log.debug(
                     "%s %s retrying in %.2fs (attempt %d/%d)",
@@ -303,7 +359,7 @@ class AsyncHTTPTransport(BaseClient, AsyncTransport):
                     path,
                     delay,
                     attempt + 1,
-                    self._config.max_retries,
+                    effective_max_retries,
                 )
                 await asyncio.sleep(delay)
 
@@ -319,8 +375,17 @@ class AsyncHTTPTransport(BaseClient, AsyncTransport):
         *,
         cast_to: type[_T] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self.request("GET", path, cast_to=cast_to, params=params)
+        return await self.request(
+            "GET",
+            path,
+            cast_to=cast_to,
+            params=params,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     async def post(
         self,
@@ -328,8 +393,17 @@ class AsyncHTTPTransport(BaseClient, AsyncTransport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self.request("POST", path, body=body, cast_to=cast_to)
+        return await self.request(
+            "POST",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     async def put(
         self,
@@ -337,8 +411,17 @@ class AsyncHTTPTransport(BaseClient, AsyncTransport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self.request("PUT", path, body=body, cast_to=cast_to)
+        return await self.request(
+            "PUT",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     async def patch(
         self,
@@ -346,11 +429,26 @@ class AsyncHTTPTransport(BaseClient, AsyncTransport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self.request("PATCH", path, body=body, cast_to=cast_to)
+        return await self.request(
+            "PATCH",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
-    async def delete(self, path: str) -> None:
-        await self.request("DELETE", path)
+    async def delete(
+        self,
+        path: str,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> None:
+        await self.request("DELETE", path, timeout=timeout, max_retries=max_retries)
 
     async def close(self) -> None:
         await self._client.aclose()

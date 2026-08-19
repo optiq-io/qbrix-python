@@ -25,8 +25,16 @@ class SyncAPIResource:
         *,
         cast_to: type[_T] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self._client.get(path, cast_to=cast_to, params=params)
+        return self._client.get(
+            path,
+            cast_to=cast_to,
+            params=params,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     def _post(
         self,
@@ -34,8 +42,12 @@ class SyncAPIResource:
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self._client.post(path, body=body, cast_to=cast_to)
+        return self._client.post(
+            path, body=body, cast_to=cast_to, timeout=timeout, max_retries=max_retries
+        )
 
     def _put(
         self,
@@ -43,8 +55,12 @@ class SyncAPIResource:
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self._client.put(path, body=body, cast_to=cast_to)
+        return self._client.put(
+            path, body=body, cast_to=cast_to, timeout=timeout, max_retries=max_retries
+        )
 
     def _patch(
         self,
@@ -52,11 +68,21 @@ class SyncAPIResource:
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self._client.patch(path, body=body, cast_to=cast_to)
+        return self._client.patch(
+            path, body=body, cast_to=cast_to, timeout=timeout, max_retries=max_retries
+        )
 
-    def _delete(self, path: str) -> None:
-        self._client.delete(path)
+    def _delete(
+        self,
+        path: str,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> None:
+        self._client.delete(path, timeout=timeout, max_retries=max_retries)
 
 
 class AsyncAPIResource:
@@ -71,8 +97,16 @@ class AsyncAPIResource:
         *,
         cast_to: type[_T] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self._client.get(path, cast_to=cast_to, params=params)
+        return await self._client.get(
+            path,
+            cast_to=cast_to,
+            params=params,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     async def _post(
         self,
@@ -80,8 +114,12 @@ class AsyncAPIResource:
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self._client.post(path, body=body, cast_to=cast_to)
+        return await self._client.post(
+            path, body=body, cast_to=cast_to, timeout=timeout, max_retries=max_retries
+        )
 
     async def _put(
         self,
@@ -89,8 +127,12 @@ class AsyncAPIResource:
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self._client.put(path, body=body, cast_to=cast_to)
+        return await self._client.put(
+            path, body=body, cast_to=cast_to, timeout=timeout, max_retries=max_retries
+        )
 
     async def _patch(
         self,
@@ -98,8 +140,18 @@ class AsyncAPIResource:
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self._client.patch(path, body=body, cast_to=cast_to)
+        return await self._client.patch(
+            path, body=body, cast_to=cast_to, timeout=timeout, max_retries=max_retries
+        )
 
-    async def _delete(self, path: str) -> None:
-        await self._client.delete(path)
+    async def _delete(
+        self,
+        path: str,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> None:
+        await self._client.delete(path, timeout=timeout, max_retries=max_retries)

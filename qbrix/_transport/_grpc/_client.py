@@ -123,18 +123,29 @@ class GRPCTransport(_BaseGRPCTransport, Transport):
             self._channel = grpc.insecure_channel(self._target, options=options)
         self._stub = proxy_pb2_grpc.ProxyServiceStub(self._channel)
 
-    def _call(self, stub_attr: str, req: Any) -> Any:
+    def _call(
+        self,
+        stub_attr: str,
+        req: Any,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> Any:
         stub_method = getattr(self._stub, stub_attr)
         last_exc: QbrixAPIError | None = None
-        max_attempts = self._config.max_retries + 1
+        effective_timeout = timeout if timeout is not None else self._config.timeout
+        effective_max_retries = (
+            max_retries if max_retries is not None else self._config.max_retries
+        )
+        max_attempts = effective_max_retries + 1
         for attempt in range(max_attempts):
             _log.debug("%s attempt=%d/%d", stub_attr, attempt + 1, max_attempts)
             try:
                 return stub_method(
-                    req, metadata=self._metadata(), timeout=self._config.timeout
+                    req, metadata=self._metadata(), timeout=effective_timeout
                 )
             except grpc.RpcError as exc:
-                if not is_retryable(exc) or attempt >= self._config.max_retries:
+                if not is_retryable(exc) or attempt >= effective_max_retries:
                     raise make_grpc_error(exc) from exc
                 last_exc = make_grpc_error(exc)  # type: ignore[assignment]
                 time.sleep(self._calculate_retry_delay(attempt, last_exc))
@@ -151,11 +162,13 @@ class GRPCTransport(_BaseGRPCTransport, Transport):
         body: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
         req, stub_attr, converter, path_params = _dispatch_prepare(
             method, path, body, params
         )
-        resp = self._call(stub_attr, req)
+        resp = self._call(stub_attr, req, timeout=timeout, max_retries=max_retries)
         return _finalize(converter(resp, path_params), cast_to)
 
     def get(
@@ -164,8 +177,17 @@ class GRPCTransport(_BaseGRPCTransport, Transport):
         *,
         cast_to: type[_T] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self.request("GET", path, cast_to=cast_to, params=params)
+        return self.request(
+            "GET",
+            path,
+            cast_to=cast_to,
+            params=params,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     def post(
         self,
@@ -173,8 +195,17 @@ class GRPCTransport(_BaseGRPCTransport, Transport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self.request("POST", path, body=body, cast_to=cast_to)
+        return self.request(
+            "POST",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     def put(
         self,
@@ -182,8 +213,17 @@ class GRPCTransport(_BaseGRPCTransport, Transport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self.request("PUT", path, body=body, cast_to=cast_to)
+        return self.request(
+            "PUT",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     def patch(
         self,
@@ -191,11 +231,26 @@ class GRPCTransport(_BaseGRPCTransport, Transport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return self.request("PATCH", path, body=body, cast_to=cast_to)
+        return self.request(
+            "PATCH",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
-    def delete(self, path: str) -> None:
-        self.request("DELETE", path)
+    def delete(
+        self,
+        path: str,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> None:
+        self.request("DELETE", path, timeout=timeout, max_retries=max_retries)
 
     def close(self) -> None:
         self._channel.close()
@@ -225,18 +280,29 @@ class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
             self._channel = grpc.aio.insecure_channel(self._target, options=options)
         self._stub = proxy_pb2_grpc.ProxyServiceStub(self._channel)
 
-    async def _call(self, stub_attr: str, req: Any) -> Any:
+    async def _call(
+        self,
+        stub_attr: str,
+        req: Any,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> Any:
         stub_method = getattr(self._stub, stub_attr)
         last_exc: QbrixAPIError | None = None
-        max_attempts = self._config.max_retries + 1
+        effective_timeout = timeout if timeout is not None else self._config.timeout
+        effective_max_retries = (
+            max_retries if max_retries is not None else self._config.max_retries
+        )
+        max_attempts = effective_max_retries + 1
         for attempt in range(max_attempts):
             _log.debug("%s attempt=%d/%d", stub_attr, attempt + 1, max_attempts)
             try:
                 return await stub_method(
-                    req, metadata=self._metadata(), timeout=self._config.timeout
+                    req, metadata=self._metadata(), timeout=effective_timeout
                 )
             except grpc.RpcError as exc:
-                if not is_retryable(exc) or attempt >= self._config.max_retries:
+                if not is_retryable(exc) or attempt >= effective_max_retries:
                     raise make_grpc_error(exc) from exc
                 last_exc = make_grpc_error(exc)  # type: ignore[assignment]
                 await asyncio.sleep(self._calculate_retry_delay(attempt, last_exc))
@@ -252,11 +318,15 @@ class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
         body: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
         req, stub_attr, converter, path_params = _dispatch_prepare(
             method, path, body, params
         )
-        resp = await self._call(stub_attr, req)
+        resp = await self._call(
+            stub_attr, req, timeout=timeout, max_retries=max_retries
+        )
         return _finalize(converter(resp, path_params), cast_to)
 
     async def get(
@@ -265,8 +335,17 @@ class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
         *,
         cast_to: type[_T] | None = None,
         params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self.request("GET", path, cast_to=cast_to, params=params)
+        return await self.request(
+            "GET",
+            path,
+            cast_to=cast_to,
+            params=params,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     async def post(
         self,
@@ -274,8 +353,17 @@ class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self.request("POST", path, body=body, cast_to=cast_to)
+        return await self.request(
+            "POST",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     async def put(
         self,
@@ -283,8 +371,17 @@ class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self.request("PUT", path, body=body, cast_to=cast_to)
+        return await self.request(
+            "PUT",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     async def patch(
         self,
@@ -292,11 +389,26 @@ class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
         *,
         body: dict[str, Any] | None = None,
         cast_to: type[_T] | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        return await self.request("PATCH", path, body=body, cast_to=cast_to)
+        return await self.request(
+            "PATCH",
+            path,
+            body=body,
+            cast_to=cast_to,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
-    async def delete(self, path: str) -> None:
-        await self.request("DELETE", path)
+    async def delete(
+        self,
+        path: str,
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> None:
+        await self.request("DELETE", path, timeout=timeout, max_retries=max_retries)
 
     async def close(self) -> None:
         await self._channel.close()
