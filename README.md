@@ -161,6 +161,8 @@ if result.is_fallback:
 qbrix.agent.feedback(result.request_id, reward=1.0)  # no-op when request_id is None
 ```
 
+`fallback` only kicks in for availability failures (timeout, connection error, 429, 5xx) — a 4xx caller error still raises even with `fallback` set, so it doesn't get hidden behind a fabricated selection. See [`examples/handling_outages.py`](examples/handling_outages.py) for a runnable version, and [qbrix.io/docs/handling-outages](https://qbrix.io/docs/handling-outages) for the full contract.
+
 ## Feature Gates
 
 Attach a feature gate to control rollout before the bandit kicks in:
