@@ -66,6 +66,24 @@ class BaseClient:
         return headers
 
     @staticmethod
+    def _flatten_validation_detail(raw: list[Any]) -> tuple[str, dict[str, Any]]:
+        """Summarise FastAPI's 422 error list into a message + context.
+
+        422s bypass the proxy's ``{code, detail, context}`` envelope, so
+        ``detail`` arrives as a list of per-field dicts. Flatten it to keep
+        ``QbrixAPIError.detail`` a string, and keep the raw list reachable.
+        """
+        parts = []
+        for err in raw:
+            if not isinstance(err, dict):
+                parts.append(str(err))
+                continue
+            loc = ".".join(str(p) for p in err.get("loc", ()) if p != "body")
+            msg = err.get("msg", "invalid")
+            parts.append(f"{loc}: {msg}" if loc else str(msg))
+        return "; ".join(parts) or "request validation failed", {"errors": raw}
+
+    @staticmethod
     def _make_status_error(response: httpx.Response) -> QbrixAPIError:
         detail = ""
         context = None
@@ -73,6 +91,11 @@ class BaseClient:
             body = response.json()
             detail = body.get("detail", response.text)
             context = body.get("context")
+            if isinstance(detail, list):
+                detail, validation_context = BaseClient._flatten_validation_detail(
+                    detail
+                )
+                context = {**(context or {}), **validation_context}
         except Exception:  # noqa
             detail = response.text
 

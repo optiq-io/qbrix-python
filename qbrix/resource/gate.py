@@ -7,6 +7,7 @@ from qbrix._util import NotGiven
 from qbrix.resource._base import AsyncAPIResource
 from qbrix.resource._base import SyncAPIResource
 from qbrix.model.gate import GateConfig
+from qbrix.model.gate import GateEvaluation
 from qbrix.model.gate import GateRule
 
 
@@ -159,6 +160,39 @@ class GateResource(SyncAPIResource):
             f"/api/v1/gates/{experiment_id}", body=body, cast_to=GateConfig
         )
 
+    def evaluate(
+        self,
+        experiment_id: str,
+        *,
+        context_id: str = "",
+        context_metadata: dict[str, Any] | None = None,
+    ) -> GateEvaluation:
+        """Dry-run the gate against a sample context.
+
+        Read-only: nothing is persisted and no selection is recorded. Runs the
+        same decision path ``agent.select()`` uses, so the preview cannot drift
+        from live behaviour::
+
+            client.gate.evaluate(experiment_id, context_id="user-1",
+                                 context_metadata={"plan": "pro"})
+
+        ``context_id`` is what the rollout percentage hashes on; a blank one is
+        evaluated as-is. ``context_metadata`` holds the attributes the
+        targeting rules read.
+
+        Note: HTTP-only. There is no ``EvaluateGateConfig`` RPC in
+        ``proxy.proto``, so this raises ``NotImplementedError`` on the gRPC
+        transport.
+        """
+        return self._post(
+            f"/api/v1/gates/{experiment_id}/evaluate",
+            body={
+                "context_id": context_id,
+                "context_metadata": context_metadata or {},
+            },
+            cast_to=GateEvaluation,
+        )
+
     def delete(self, experiment_id: str) -> None:
         self._delete(f"/api/v1/gates/{experiment_id}")
 
@@ -233,6 +267,39 @@ class AsyncGateResource(AsyncAPIResource):
         )
         return await self._patch(
             f"/api/v1/gates/{experiment_id}", body=body, cast_to=GateConfig
+        )
+
+    async def evaluate(
+        self,
+        experiment_id: str,
+        *,
+        context_id: str = "",
+        context_metadata: dict[str, Any] | None = None,
+    ) -> GateEvaluation:
+        """Dry-run the gate against a sample context.
+
+        Read-only: nothing is persisted and no selection is recorded. Runs the
+        same decision path ``agent.select()`` uses, so the preview cannot drift
+        from live behaviour::
+
+            await client.gate.evaluate(experiment_id, context_id="user-1",
+                                       context_metadata={"plan": "pro"})
+
+        ``context_id`` is what the rollout percentage hashes on; a blank one is
+        evaluated as-is. ``context_metadata`` holds the attributes the
+        targeting rules read.
+
+        Note: HTTP-only. There is no ``EvaluateGateConfig`` RPC in
+        ``proxy.proto``, so this raises ``NotImplementedError`` on the gRPC
+        transport.
+        """
+        return await self._post(
+            f"/api/v1/gates/{experiment_id}/evaluate",
+            body={
+                "context_id": context_id,
+                "context_metadata": context_metadata or {},
+            },
+            cast_to=GateEvaluation,
         )
 
     async def delete(self, experiment_id: str) -> None:

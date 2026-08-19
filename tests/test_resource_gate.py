@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from qbrix.model.gate import GateConfig
+from qbrix.model.gate import GateEvaluation
 from qbrix.model.gate import GateRule
 from qbrix.resource.gate import AsyncGateResource
 from qbrix.resource.gate import GateResource
@@ -14,6 +15,26 @@ GATE_RESPONSE = {
     "rules": [{"key": "plan", "operator": "==", "value": "pro", "arm_id": "a1"}],
     "updated_at": "2024-01-01T00:00:00",
     "version": 1,
+}
+
+EVALUATE_RESPONSE = {
+    "eligible": False,
+    "reason": "rule",
+    "arm_id": "a1",
+    "arm_name": "control",
+    "enabled": True,
+    "in_schedule": True,
+    "in_rollout": True,
+    "rollout_percentage": 80.0,
+    "rules": [
+        {
+            "key": "plan",
+            "operator": "==",
+            "value": "pro",
+            "matched": True,
+            "decisive": True,
+        }
+    ],
 }
 
 
@@ -138,6 +159,38 @@ class TestGateResource:
 
         assert mock_client.calls == []
 
+    def test_evaluate(self, mock_client: MockSyncClient) -> None:
+        mock_client.enqueue(EVALUATE_RESPONSE)
+        resource = GateResource(mock_client)
+        result = resource.evaluate(
+            "e1", context_id="user-1", context_metadata={"plan": "pro"}
+        )
+
+        assert isinstance(result, GateEvaluation)
+        assert result.reason == "rule"
+        assert result.arm_name == "control"
+        assert result.rules[0].matched is True
+
+        call = mock_client.calls[0]
+        assert call["method"] == "POST"
+        assert call["path"] == "/api/v1/gates/e1/evaluate"
+        assert call["json"] == {
+            "context_id": "user-1",
+            "context_metadata": {"plan": "pro"},
+        }
+
+    def test_evaluate_defaults_to_an_empty_context(
+        self, mock_client: MockSyncClient
+    ) -> None:
+        mock_client.enqueue(EVALUATE_RESPONSE)
+        resource = GateResource(mock_client)
+        resource.evaluate("e1")
+
+        assert mock_client.calls[0]["json"] == {
+            "context_id": "",
+            "context_metadata": {},
+        }
+
     def test_delete(self, mock_client: MockSyncClient) -> None:
         mock_client.enqueue({})
         resource = GateResource(mock_client)
@@ -218,3 +271,22 @@ class TestAsyncGateResource:
         resource = AsyncGateResource(async_mock_client)
         await resource.delete("e1")
         assert async_mock_client.calls[0]["method"] == "DELETE"
+
+    async def test_evaluate(self, async_mock_client: MockAsyncClient) -> None:
+        async_mock_client.enqueue(EVALUATE_RESPONSE)
+        resource = AsyncGateResource(async_mock_client)
+        result = await resource.evaluate(
+            "e1", context_id="user-1", context_metadata={"plan": "pro"}
+        )
+
+        assert isinstance(result, GateEvaluation)
+        assert result.eligible is False
+        assert result.rules[0].decisive is True
+
+        call = async_mock_client.calls[0]
+        assert call["method"] == "POST"
+        assert call["path"] == "/api/v1/gates/e1/evaluate"
+        assert call["json"] == {
+            "context_id": "user-1",
+            "context_metadata": {"plan": "pro"},
+        }

@@ -122,6 +122,47 @@ class TestErrorMapping:
         assert exc.status_code == 501
 
 
+class TestExpiredFeedbackToken:
+    """The proxy sends an expired feedback token as DEADLINE_EXCEEDED.
+
+    TokenExpiredException subclasses DeadlineExceededException upstream, so the
+    status alone is ambiguous. HTTP surfaces the same condition as a 400, and
+    the transports are supposed to raise the same class.
+    """
+
+    def test_token_expired_maps_to_bad_request_not_timeout(self) -> None:
+        exc = make_grpc_error(
+            _FakeRpcError(grpc.StatusCode.DEADLINE_EXCEEDED, "token expired")
+        )
+        assert isinstance(exc, BadRequestError)
+        assert exc.status_code == 400
+
+    def test_token_expired_carries_the_proxys_detail(self) -> None:
+        exc = make_grpc_error(
+            _FakeRpcError(
+                grpc.StatusCode.DEADLINE_EXCEEDED, "token expired (900ms > 500ms)"
+            )
+        )
+        assert isinstance(exc, BadRequestError)
+        assert "900ms" in exc.detail
+
+    def test_a_real_deadline_is_still_a_timeout(self) -> None:
+        exc = make_grpc_error(
+            _FakeRpcError(grpc.StatusCode.DEADLINE_EXCEEDED, "Deadline Exceeded")
+        )
+        assert isinstance(exc, QbrixTimeoutError)
+
+    def test_token_expired_is_not_retried(self) -> None:
+        # Retrying a stale token can never succeed — it would just burn the
+        # retry budget before failing anyway.
+        assert (
+            is_retryable(
+                _FakeRpcError(grpc.StatusCode.DEADLINE_EXCEEDED, "token expired")
+            )
+            is False
+        )
+
+
 class TestRetryability:
     @pytest.mark.parametrize(
         "code,retryable",

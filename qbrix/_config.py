@@ -20,7 +20,10 @@ class QbrixConfig(BaseSettings):
     max_keepalive_connections: int | None = None
 
     # gRPC transport (no effect when transport="http").
-    # Defaults mirror /Users/eskinmi/Dev/qbrix/svc/proxy/src/proxysvc/client.py.
+    # keepalive_time must stay above the proxy gRPC server's
+    # grpc_server_min_recv_ping_interval_ms (5s, see GrpcSettings in
+    # ../qbrix/lib/runtime/qbrixruntime/config.py) or the server answers pings
+    # with GOAWAY/ENHANCE_YOUR_CALM.
     grpc_keepalive_time_ms: int = 30_000
     grpc_keepalive_timeout_ms: int = 10_000
     grpc_http2_max_pings_without_data: int = 0

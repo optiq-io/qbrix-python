@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Python SDK for the Qbrix distributed computing platform — a multi-armed bandit system for site variant optimisation. The SDK wraps the Qbrix proxy service HTTP API (`proxysvc`), providing typed sync and async clients for pool/experiment/gate management and the agent select/feedback loop.
 
-The upstream proxy service lives at `../qbrix/svc/proxy` — consult it for API endpoint behavior, request/response shapes, and feature gate evaluation logic.
+The upstream proxy service lives at `../qbrix/svc/proxy` — consult it for API endpoint behavior, request/response shapes, and feature gate evaluation logic. HTTP routes are under `src/proxysvc/transport/http/router/`, gRPC under `src/proxysvc/transport/grpc/`, and per-domain schemas under `src/proxysvc/mod/<domain>/`.
 
 ## Commands
 
@@ -63,7 +63,18 @@ Transport is chosen by `Qbrix(transport="http"|"grpc")`, falling back to the `QB
 Both transports satisfy the `Transport`/`AsyncTransport` protocol (`_transport/_base.py`) — an HTTP-shaped verb interface. Resources call `self._client.post("/api/v1/pools", ...)` and never know which wire format is active.
 
 - **HTTP** (`_transport/_http/_client.py`): httpx-based; retry loop, `_make_status_error`, header construction.
-- **gRPC** (`_transport/_grpc/`): `_routes.py` maps `(method, path)` → one of 18 `ProxyService` RPCs; `_handlers.py` builds proto requests + converts responses; `_convert.py` holds explicit proto↔dict converters; `_error.py` maps `grpc.StatusCode` → the same `QbrixAPIError` subclasses. Paths with no proto RPC (`/api/v1/runtime/*`) raise `NotImplementedError` — those resources are HTTP-only.
+- **gRPC** (`_transport/_grpc/`): `_routes.py` maps `(method, path)` → one of 18 `ProxyService` RPCs; `_handlers.py` builds proto requests + converts responses; `_convert.py` holds explicit proto↔dict converters; `_error.py` maps `grpc.StatusCode` → the same `QbrixAPIError` subclasses. Paths with no proto RPC raise `NotImplementedError` — see `_HTTP_ONLY` in `_routes.py` for the HTTP-only set (`/api/v1/runtime/*`, `gate.evaluate()`, `experiment.reset()`).
+
+**Known HTTP/gRPC parity gaps** (need an upstream `proxy.proto` change to close — the SDK cannot fix these on its own):
+
+| Field | HTTP | gRPC |
+|-------|------|------|
+| `GateConfig.default_arm_name`, `rules[].arm_name` | resolved server-side | always `None` — no proto field |
+| `GateConfig.updated_at` | real value | always `None` — no proto field |
+| `GateConfig.version` | real value | always `1` (model default) — no proto field |
+| `Experiment.meta_experiment_id` | real value | always `None` — not in `common.proto` |
+
+`GateConfig.version` is the sharp edge: it is silently *wrong* over gRPC rather than merely absent, so don't build optimistic-concurrency logic on it without `transport="http"`.
 - **Vendored protos** (`_transport/_grpc/_proto/`): generated `*_pb2.py`/`.pyi` from `../qbrix/proto/{common,proxy}.proto`. Regenerate with `make proto` (or `bash bin/regen_protos.sh`); committed to git, never hand-edited.
 
 ### Resource Layer (`resource/`)
@@ -92,13 +103,23 @@ The SDK targets these proxy endpoints (all under `/api/v1`):
 
 - **Pools:** `POST/GET/PATCH/DELETE /pools[/{id}]`, `GET /pools/{id}/experiments`
 - **Experiments:** `POST/GET/PATCH/DELETE /experiments[/{id}]` — supports `?search=&enabled=` filters
-- **Gates:** `POST/GET/PUT/DELETE /gates/{experiment_id}` — note: update is `PUT` (full replace), not `PATCH`
+- **Gates:** `POST/GET/PUT/PATCH/DELETE /gates/{experiment_id}`, `POST /gates/{experiment_id}/evaluate` — `gate.update()` sends `PATCH` (partial, matching `pool.update`/`experiment.update`); the proxy's `PUT` full-replace is deliberately unreachable from the SDK since OPT-355. `evaluate` is a read-only dry run and is HTTP-only.
 - **Agent:** `POST /agent/select`, `POST /agent/feedback`
 - **Policies:** `GET /policies` — supports `?reward_type=` filter (read-only policy discovery)
 
 ### Supported Policies
 
-Experiment `policy` field values (must match exactly): `BetaTSPolicy`, `GaussianTSPolicy`, `UCB1TunedPolicy`, `KLUCBPolicy`, `EpsilonPolicy`, `MOSSPolicy`, `MOSSAnyTimePolicy`, `LinUCBPolicy`, `LinTSPolicy`, `EXP3Policy`, `FPLPolicy`.
+Experiment `policy` field values (must match exactly), mirroring the proxy's `qbrixcore.policy.POLICIES` registry:
+
+- **Thompson Sampling:** `BetaTSPolicy`, `DiscountedTSPolicy`, `GaussianTSPolicy`, `DirichletTSPolicy`, `LinTSPolicy`, `LogisticTSPolicy`
+- **UCB:** `UCB1TunedPolicy`, `KLUCBPolicy`, `KLUCBPlusPolicy`, `LinUCBPolicy`, `GLMUCBPolicy`
+- **Epsilon-greedy:** `EpsilonPolicy`
+- **MOSS:** `MOSSPolicy`, `MOSSAnyTimePolicy`
+- **Adversarial:** `EXP3Policy`, `EXP3IXPolicy`, `FPLPolicy`
+- **Baseline:** `RandomPolicy`
+- **Meta:** `MetaBanditPolicy`
+
+`policy.list()` is the runtime source of truth if `PolicyName` drifts from the registry.
 
 Contextual policies (`LinUCBPolicy`, `LinTSPolicy`) need features per selection. Declare a
 `context_schema` in `policy_params` at creation and send `context.properties` — the proxy encodes

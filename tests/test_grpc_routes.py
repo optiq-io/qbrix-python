@@ -107,18 +107,27 @@ class TestRouteCoverage:
         assert handler == "list_pools"
 
     @pytest.mark.parametrize(
-        "path,resource",
+        "method,path,resource",
         [
-            ("/api/v1/runtime/redis/health", "runtime"),
-            ("/api/v1/runtime/motor/health", "runtime"),
+            ("GET", "/api/v1/runtime/redis/health", "runtime"),
+            ("GET", "/api/v1/runtime/motor/health", "runtime"),
+            ("POST", "/api/v1/gates/e1/evaluate", "gate.evaluate()"),
+            ("POST", "/api/v1/experiments/e1/reset", "experiment.reset()"),
         ],
     )
-    def test_http_only_paths_raise(self, path: str, resource: str) -> None:
+    def test_http_only_paths_raise(self, method: str, path: str, resource: str) -> None:
         with pytest.raises(GRPCRouteNotImplementedError) as exc:
-            match("GET", path)
+            match(method, path)
         msg = str(exc.value)
         assert resource in msg
         assert "transport='http'" in msg
+
+    def test_gate_evaluate_does_not_shadow_the_gate_crud_routes(self) -> None:
+        # /gates/{id} must still match POST create — the evaluate pattern is
+        # anchored on the /evaluate suffix.
+        handler, params = match("POST", "/api/v1/gates/e1")
+        assert handler == "create_gate_config"
+        assert params == {"experiment_id": "e1"}
 
     def test_unknown_path_raises(self) -> None:
         with pytest.raises(GRPCRouteNotImplementedError) as exc:
