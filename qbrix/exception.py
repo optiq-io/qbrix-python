@@ -46,6 +46,16 @@ class ConflictError(QbrixAPIError):
     """409 — resource conflict."""
 
 
+class UnprocessableEntityError(QbrixAPIError):
+    """422 — request body failed schema validation.
+
+    Raised for FastAPI's own validation errors, which do not use the proxy's
+    ``{code, detail, context}`` envelope — ``detail`` is flattened from the
+    per-field error list into a single ``loc: msg`` summary, and the raw list
+    is preserved in ``context["errors"]``.
+    """
+
+
 class RateLimitedError(QbrixAPIError):
     """429 — rate limit exceeded."""
 
@@ -92,6 +102,7 @@ STATUS_CODE_TO_EXCEPTION: dict[int, type[QbrixAPIError]] = {
     403: ForbiddenError,
     404: NotFoundError,
     409: ConflictError,
+    422: UnprocessableEntityError,
     429: RateLimitedError,
     500: InternalServerError,
     502: BadGatewayError,

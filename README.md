@@ -185,17 +185,30 @@ except RateLimitedError as e:
 
 ## Supported Policies
 
-| Policy             | Type        | Best For                             |
-|--------------------|-------------|--------------------------------------|
-| `BetaTSPolicy`     | Stochastic  | Binary rewards (clicks, conversions) |
-| `GaussianTSPolicy` | Stochastic  | Continuous rewards                   |
-| `UCB1TunedPolicy`  | Stochastic  | Theoretical regret guarantees        |
-| `KLUCBPolicy`      | Stochastic  | Binary rewards with tight bounds     |
-| `MOSSPolicy`       | Stochastic  | Fixed horizon problems               |
-| `LinUCBPolicy`     | Contextual  | Linear reward models with features   |
-| `LinTSPolicy`      | Contextual  | Linear models with uncertainty       |
-| `EXP3Policy`       | Adversarial | Non-stationary environments          |
-| `FPLPolicy`        | Adversarial | Follow the perturbed leader          |
+| Policy                | Type        | Best For                             |
+|-----------------------|-------------|--------------------------------------|
+| `BetaTSPolicy`        | Stochastic  | Binary rewards (clicks, conversions) |
+| `DiscountedTSPolicy`  | Stochastic  | Binary rewards that drift over time  |
+| `GaussianTSPolicy`    | Stochastic  | Continuous rewards                   |
+| `DirichletTSPolicy`   | Stochastic  | Categorical / multi-outcome rewards  |
+| `LogisticTSPolicy`    | Contextual  | Binary rewards with features         |
+| `UCB1TunedPolicy`     | Stochastic  | Theoretical regret guarantees        |
+| `KLUCBPolicy`         | Stochastic  | Binary rewards with tight bounds     |
+| `KLUCBPlusPolicy`     | Stochastic  | Tighter KL-UCB for long horizons     |
+| `MOSSPolicy`          | Stochastic  | Fixed horizon problems               |
+| `MOSSAnyTimePolicy`   | Stochastic  | Unknown horizon                      |
+| `EpsilonPolicy`       | Stochastic  | Simple, predictable exploration      |
+| `LinUCBPolicy`        | Contextual  | Linear reward models with features   |
+| `LinTSPolicy`         | Contextual  | Linear models with uncertainty       |
+| `GLMUCBPolicy`        | Contextual  | Generalised linear reward models     |
+| `EXP3Policy`          | Adversarial | Non-stationary environments          |
+| `EXP3IXPolicy`        | Adversarial | EXP3 with lower-variance estimates   |
+| `FPLPolicy`           | Adversarial | Follow the perturbed leader          |
+| `RandomPolicy`        | Baseline    | A/B-style control for benchmarking   |
+| `MetaBanditPolicy`    | Meta        | Delegates to `policy="auto"`         |
+
+Pass `policy="auto"` to let qbrix pick and tune a policy for you (backed by
+`MetaBanditPolicy`). `client.policy.list()` is the runtime source of truth.
 
 ## License
 

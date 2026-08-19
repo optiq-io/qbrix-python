@@ -6,6 +6,8 @@ callers can catch the same exception types regardless of transport.
 
 from __future__ import annotations
 
+import re
+
 import grpc
 
 from qbrix.exception import AuthenticationError
@@ -57,6 +59,12 @@ RETRYABLE_STATUSES: frozenset[grpc.StatusCode] = frozenset(
     }
 )
 
+# The proxy's TokenExpiredException subclasses DeadlineExceededException, so an
+# expired feedback token arrives as DEADLINE_EXCEEDED with a fixed "token
+# expired" detail (transport/grpc/exception/base.py). Retrying it can never
+# help — the token is stale, not the deadline.
+_TOKEN_EXPIRED_RE = re.compile(r"token expired", re.IGNORECASE)
+
 
 def _extract_retry_after(rpc_error: grpc.RpcError) -> float | None:
     """Pull retry-after from trailing metadata if the server included it."""
@@ -95,6 +103,13 @@ def make_grpc_error(rpc_error: grpc.RpcError) -> Exception:
         details = str(rpc_error)
 
     if code is grpc.StatusCode.DEADLINE_EXCEEDED:
+        # The proxy reuses DEADLINE_EXCEEDED for an expired feedback token
+        # (mod/agent/token.py TokenExpiredError → TokenExpiredException), which
+        # is a business-level 400 the HTTP transport surfaces as
+        # BadRequestError — not an RPC that ran out of time. Disambiguate on
+        # the details text so callers catch the same class either way.
+        if _TOKEN_EXPIRED_RE.search(details):
+            return BadRequestError(400, details, None)
         return QbrixTimeoutError(details or "deadline exceeded")
 
     if code is grpc.StatusCode.UNIMPLEMENTED:
@@ -128,9 +143,16 @@ def make_grpc_error(rpc_error: grpc.RpcError) -> Exception:
 
 def is_retryable(rpc_error: grpc.RpcError) -> bool:
     try:
-        return rpc_error.code() in RETRYABLE_STATUSES
+        if rpc_error.code() not in RETRYABLE_STATUSES:
+            return False
     except Exception:
         return False
+    # An expired feedback token rides in on DEADLINE_EXCEEDED but is terminal —
+    # retrying burns the budget on a token that can never be accepted.
+    try:
+        return not _TOKEN_EXPIRED_RE.search(rpc_error.details() or "")
+    except Exception:
+        return True
 
 
 __all__ = [

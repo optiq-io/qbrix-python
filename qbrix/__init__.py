@@ -31,6 +31,7 @@ from qbrix.exception import QbrixError
 from qbrix.exception import QbrixTimeoutError
 from qbrix.exception import RateLimitedError
 from qbrix.exception import ServiceUnavailableError
+from qbrix.exception import UnprocessableEntityError
 from qbrix.model import Arm
 from qbrix.model import ArmCreate
 from qbrix.model import Context
@@ -39,7 +40,9 @@ from qbrix.model import ExperimentCreate
 from qbrix.model import ExperimentUpdate
 from qbrix.model import GateConfig
 from qbrix.model import GateCreate
+from qbrix.model import GateEvaluation
 from qbrix.model import GateRule
+from qbrix.model import GateRuleEvaluation
 from qbrix.model import PaginatedResponse
 from qbrix.model import Policy
 from qbrix.model import PolicyParam
@@ -90,6 +93,7 @@ __all__ = [
     "QbrixTimeoutError",
     "RateLimitedError",
     "ServiceUnavailableError",
+    "UnprocessableEntityError",
     # resources
     "AgentResource",
     "ExperimentResource",
@@ -106,7 +110,9 @@ __all__ = [
     "ExperimentUpdate",
     "GateConfig",
     "GateCreate",
+    "GateEvaluation",
     "GateRule",
+    "GateRuleEvaluation",
     "PaginatedResponse",
     "Policy",
     "PolicyName",

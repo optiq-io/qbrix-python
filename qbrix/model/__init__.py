@@ -10,7 +10,9 @@ from qbrix.model.experiment import ExperimentCreate
 from qbrix.model.experiment import ExperimentUpdate
 from qbrix.model.gate import GateConfig
 from qbrix.model.gate import GateCreate
+from qbrix.model.gate import GateEvaluation
 from qbrix.model.gate import GateRule
+from qbrix.model.gate import GateRuleEvaluation
 from qbrix.model.policy import Policy
 from qbrix.model.policy import PolicyParam
 from qbrix.model.pool import Arm
@@ -30,7 +32,9 @@ __all__ = [
     "FeedbackResponse",
     "GateConfig",
     "GateCreate",
+    "GateEvaluation",
     "GateRule",
+    "GateRuleEvaluation",
     "PaginatedResponse",
     "Policy",
     "PolicyParam",

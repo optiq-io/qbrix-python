@@ -16,6 +16,7 @@ from qbrix.exception import QbrixConnectionError
 from qbrix.exception import QbrixTimeoutError
 from qbrix.exception import RateLimitedError
 from qbrix.exception import ServiceUnavailableError
+from qbrix.exception import UnprocessableEntityError
 
 
 @pytest.mark.unit
@@ -97,6 +98,41 @@ class TestMakeStatusError:
         )
         err = client._make_status_error(response)
         assert err.context == {"experiments": ["exp-1"]}
+        client.close()
+
+    def test_422_flattens_fastapis_validation_list(self) -> None:
+        # 422s bypass the proxy's {code, detail, context} envelope — FastAPI's
+        # own handler sends detail as a list of per-field dicts.
+        client = SyncAPIClient(api_key="optiq_test", max_retries=0)
+        errors = [
+            {
+                "loc": ["body", "rollout_percentage"],
+                "msg": "input should be less than or equal to 100",
+                "type": "less_than_equal",
+            },
+            {"loc": ["body", "policy"], "msg": "field required", "type": "missing"},
+        ]
+        response = httpx.Response(422, json={"detail": errors})
+        err = client._make_status_error(response)
+
+        assert isinstance(err, UnprocessableEntityError)
+        assert err.status_code == 422
+        assert isinstance(err.detail, str)
+        assert "rollout_percentage: input should be less than or equal to 100" in (
+            err.detail
+        )
+        assert "policy: field required" in err.detail
+        # the raw list stays reachable for callers that want the structure
+        assert err.context is not None
+        assert err.context["errors"] == errors
+        client.close()
+
+    def test_422_with_a_plain_string_detail_is_left_alone(self) -> None:
+        client = SyncAPIClient(api_key="optiq_test", max_retries=0)
+        response = httpx.Response(422, json={"detail": "unprocessable"})
+        err = client._make_status_error(response)
+        assert isinstance(err, UnprocessableEntityError)
+        assert err.detail == "unprocessable"
         client.close()
 
 
