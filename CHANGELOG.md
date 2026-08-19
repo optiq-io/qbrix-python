@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.9](https://github.com/optiq-io/qbrix-python/compare/v0.2.8...v0.2.9) (2026-08-19)
+
+
+### Features
+
+* sub-second per-call timeouts and fail-open fallback for agent.select ([3259a2d](https://github.com/optiq-io/qbrix-python/commit/3259a2da27dd91a5c48d50fe087423597bc8f67b))
+
 ## [0.2.8](https://github.com/optiq-io/qbrix-python/compare/v0.2.7...v0.2.8) (2026-08-19)
 
 
