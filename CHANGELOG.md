@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.10](https://github.com/optiq-io/qbrix-python/compare/v0.2.9...v0.2.10) (2026-08-19)
+
+
+### Documentation
+
+* add worked timeout/fallback example, link from README (OPT-336) ([4f9f331](https://github.com/optiq-io/qbrix-python/commit/4f9f331ff6c2cc0a64c37b6592ec7a834068a726))
+* worked timeout/fallback example + README link (OPT-336) ([beb3f4e](https://github.com/optiq-io/qbrix-python/commit/beb3f4e23aba20521d39815f6f48ad9ed996495b))
+
 ## [0.2.9](https://github.com/optiq-io/qbrix-python/compare/v0.2.8...v0.2.9) (2026-08-19)
 
 
