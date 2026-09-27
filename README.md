@@ -157,7 +157,7 @@ client = Qbrix()  # picks up env vars automatically
 | Env Var | Default | Description |
 |---------|---------|-------------|
 | `QBRIX_API_KEY` | `None` | API key (`optiq_xxx`) |
-| `QBRIX_BASE_URL` | `http://localhost:8080` | Proxy service URL |
+| `QBRIX_BASE_URL` | `http://localhost:8000` | Your install's origin, without `/api` (the compose quickstart's gateway by default) |
 | `QBRIX_TRANSPORT` | _(auto)_ | `http` or `grpc` — overrides URL-scheme detection |
 | `QBRIX_TIMEOUT` | `5.0` | Request timeout / gRPC deadline (seconds) |
 | `QBRIX_MAX_RETRIES` | `0` | Retry count on transient failures (429/5xx, gRPC `UNAVAILABLE`) |
