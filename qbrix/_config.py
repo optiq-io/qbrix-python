@@ -8,7 +8,7 @@ from pydantic_settings import SettingsConfigDict
 class QbrixConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="QBRIX_", env_file=".env")
 
-    base_url: str = "http://localhost:8080"
+    base_url: str = "http://localhost:8000"
     api_key: str | None = None
     timeout: float = 5.0
     max_retries: int = 0

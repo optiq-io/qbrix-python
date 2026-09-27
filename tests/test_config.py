@@ -9,7 +9,7 @@ from qbrix._config import QbrixConfig
 class TestQbrixConfig:
     def test_defaults(self) -> None:
         cfg = QbrixConfig(api_key="optiq_test")
-        assert cfg.base_url == "http://localhost:8080"
+        assert cfg.base_url == "http://localhost:8000"
         assert cfg.timeout == 5.0
         assert cfg.max_retries == 0
         assert 429 in cfg.retry_on

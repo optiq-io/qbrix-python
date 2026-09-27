@@ -37,7 +37,7 @@ separate.
 
 Run:
     export QBRIX_API_KEY=...        # not needed against a dev-mode proxy
-    export QBRIX_BASE_URL=http://localhost:8080
+    export QBRIX_BASE_URL=http://localhost:8000
     uv run python examples/personalization.py
     uv run python examples/personalization.py --refresh-wait 330
 """
