@@ -593,6 +593,20 @@ class TestGetStats:
         assert "error:" not in result
         assert "10" in result
 
+    async def test_reads_the_insight_routes(self) -> None:
+        client = _make_client()
+        client.get.side_effect = [{"total_selections": 0}, {"arms": []}]
+        await qbrix_get_stats(
+            GetStatsInput(experiment_id="exp-1", start_ms=1, end_ms=2),
+            _make_ctx(client),
+        )
+        assert [c.args[0] for c in client.get.call_args_list] == [
+            "/api/v1/insight/experiment/exp-1",
+            "/api/v1/insight/experiment/exp-1/arms",
+        ]
+        for call in client.get.call_args_list:
+            assert call.kwargs["params"] == {"start_ms": 1, "end_ms": 2}
+
     async def test_arms_non_404_error_propagates(self) -> None:
         client = _make_client()
         overview = {

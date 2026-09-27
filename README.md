@@ -37,7 +37,7 @@ Set your credentials as environment variables and call resources directly — no
 
 ```bash
 export QBRIX_API_KEY="optiq_xxx"
-export QBRIX_BASE_URL="https://cloud.qbrix.io"
+export QBRIX_BASE_URL="http://localhost:8000"
 ```
 
 ```python
@@ -70,6 +70,26 @@ qbrix.agent.feedback(request_id=result.request_id, reward=1.0)
 
 The system learns from every reward and adjusts future selections automatically.
 
+## Self-hosted qbrix
+
+qbrix is [open source](https://github.com/optiq-io/qbrix). Run it with the
+[self-hosting guide](https://qbrix.io/docs/self-hosting): `bin/selfhost-init` and
+`docker compose up -d` from the repository, or the Helm chart. Then register in the
+console and create an API key under **Settings → API keys**.
+
+`QBRIX_BASE_URL` is the address of your install, not of the API path: the SDK adds
+`/api/...` itself.
+
+| Install | `QBRIX_BASE_URL` |
+|---|---|
+| Docker Compose quickstart | `http://localhost:8000` (or your `CONSOLE_URL` once it's on a real host) |
+| Helm chart | your ingress origin, e.g. `https://qbrix.example.com` |
+| Managed hosting | `https://cloud.qbrix.io` |
+
+The compose gateway and the chart's default ingress serve HTTP only, so use `qbrix[http]`.
+gRPC needs a direct route to the proxy's gRPC port (`50050`), for example from a
+service in the same cluster.
+
 ## Transports
 
 The same `Qbrix` client, resources, and Pydantic models work over either wire format — only the transport differs:
@@ -77,8 +97,8 @@ The same `Qbrix` client, resources, and Pydantic models work over either wire fo
 ```python
 from qbrix import Qbrix
 
-# HTTP — the qbrix cloud API
-client = Qbrix(transport="http", base_url="https://cloud.qbrix.io")
+# HTTP — your install's gateway or ingress
+client = Qbrix(transport="http", base_url="http://localhost:8000")
 
 # gRPC — a directly-reachable proxy (local dev shown; or an in-cluster address)
 client = Qbrix(transport="grpc", base_url="grpc://localhost:50050")
@@ -97,7 +117,7 @@ For full control over configuration or lifecycle (e.g. closing the transport con
 ```python
 from qbrix import Qbrix
 
-with Qbrix(api_key="optiq_xxx", base_url="https://cloud.qbrix.io") as client:
+with Qbrix(api_key="optiq_xxx", base_url="http://localhost:8000") as client:
     pool = client.pool.create(
         name="homepage-buttons",
         arms=[{"name": "blue"}, {"name": "green"}, {"name": "red"}],
@@ -125,7 +145,7 @@ Constructor kwargs take priority over environment variables, which take priority
 
 ```bash
 export QBRIX_API_KEY="optiq_xxx"
-export QBRIX_BASE_URL="https://cloud.qbrix.io"
+export QBRIX_BASE_URL="http://localhost:8000"
 ```
 
 ```python

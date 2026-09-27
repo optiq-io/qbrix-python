@@ -224,7 +224,7 @@ async def qbrix_get_stats(params: GetStatsInput, ctx: Context) -> str:
     Returns aggregate metrics and per-arm results showing which variants are winning.
     Use this to decide whether to continue, pause, or declare a winner.
 
-    Requires Qbrix Enterprise Edition (EE) with analytics enabled.
+    Requires analytics to be enabled on the qbrix install.
 
     Args:
         params.experiment_id: experiment ID
@@ -240,11 +240,11 @@ async def qbrix_get_stats(params: GetStatsInput, ctx: Context) -> str:
         if params.end_ms is not None:
             query["end_ms"] = params.end_ms
 
-        overview = await client.get(f"/api/v1/ee/insight/experiment/{params.experiment_id}", params=query)
+        overview = await client.get(f"/api/v1/insight/experiment/{params.experiment_id}", params=query)
 
         arms: list[dict[str, Any]] = []
         try:
-            arm_data = await client.get(f"/api/v1/ee/insight/experiment/{params.experiment_id}/arms", params=query)
+            arm_data = await client.get(f"/api/v1/insight/experiment/{params.experiment_id}/arms", params=query)
             arms = arm_data.get("arms", [])
         except QbrixAPIError as e:
             if e.status_code != 404:
