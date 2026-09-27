@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.11](https://github.com/optiq-io/qbrix-python/compare/v0.2.10...v0.2.11) (2026-09-27)
+
+
+### Bug Fixes
+
+* **mcp:** read stats from /api/v1/insight, and document self-hosted qbrix ([29c09e6](https://github.com/optiq-io/qbrix-python/commit/29c09e6b24c92dad86c6082d07d36b7eed242eff))
+* **mcp:** read stats from /api/v1/insight, and document self-hosted qbrix ([85a7c45](https://github.com/optiq-io/qbrix-python/commit/85a7c457bfbaf20bd5f5a29a0e341597f4935930))
+
 ## [0.2.10](https://github.com/optiq-io/qbrix-python/compare/v0.2.9...v0.2.10) (2026-08-19)
 
 
