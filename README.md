@@ -84,7 +84,7 @@ console and create an API key under **Settings → API keys**.
 |---|---|
 | Docker Compose quickstart | `http://localhost:8000` (or your `CONSOLE_URL` once it's on a real host) |
 | Helm chart | your ingress origin, e.g. `https://qbrix.example.com` |
-| Managed hosting | `https://cloud.qbrix.io` |
+| Managed hosting | the URL you were given for your deployment |
 
 The compose gateway and the chart's default ingress serve HTTP only, so use `qbrix[http]`.
 gRPC needs a direct route to the proxy's gRPC port (`50050`), for example from a
@@ -106,7 +106,7 @@ client = Qbrix(transport="grpc", base_url="grpc://localhost:50050")
 
 When `transport` is omitted it's resolved in this order: the `transport=` kwarg → the `QBRIX_TRANSPORT` env var → the `base_url` scheme (`grpc://` / `grpcs://` → gRPC) → HTTP.
 
-gRPC needs a directly-reachable proxy gRPC endpoint. The hosted cloud at `cloud.qbrix.io` is served over HTTPS behind a CDN and does **not** expose gRPC — use `transport="http"` for it. Reach for gRPC against a local proxy (`grpc://localhost:50050`) or a service deployed alongside the proxy.
+gRPC needs a directly-reachable proxy gRPC endpoint. An install served over HTTPS behind a gateway or CDN usually does **not** expose gRPC — use `transport="http"` for it. Reach for gRPC against a local proxy (`grpc://localhost:50050`) or a service deployed alongside the proxy.
 
 The gRPC transport covers **pool, experiment, gate, agent, and policy** operations. The `runtime` resource is HTTP-only (the proxy doesn't expose it over gRPC) — calling it on a gRPC client raises `NotImplementedError`. Install `qbrix[all]` and use `transport="http"` if you need it.
 
