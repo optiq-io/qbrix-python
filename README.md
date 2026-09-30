@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Python SDK for the qbrix platform.</strong>
+  <strong>Python SDK for qbrix, the open-source decision engine.</strong>
 </p>
 
 <p align="center">
