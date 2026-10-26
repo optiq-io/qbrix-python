@@ -4,7 +4,7 @@ The SDK's resources call ``self._client.post("/api/v1/pools", ...)`` and the
 GRPC transport translates that to the matching ``ProxyService`` RPC. Routes
 mirror the 1:1 mapping between HTTP routes in
 ``../qbrix/svc/proxy/src/proxysvc/transport/http/router/`` and RPCs in
-``../qbrix/proto/proxy.proto``.
+``../qbrix/proto/proxy.proto`` and ``../qbrix/proto/loop.proto``.
 
 Paths outside this table raise ``NotImplementedError`` — they are HTTP-only
 because ``proxy.proto`` doesn't expose them. See ``_HTTP_ONLY`` for the ones
@@ -55,9 +55,9 @@ ROUTES: tuple[Route, ...] = (
     _r("PUT", r"^/api/v1/gates/(?P<experiment_id>[^/]+)$", "update_gate_config"),
     _r("PATCH", r"^/api/v1/gates/(?P<experiment_id>[^/]+)$", "patch_gate_config"),
     _r("DELETE", r"^/api/v1/gates/(?P<experiment_id>[^/]+)$", "delete_gate_config"),
-    # agent
-    _r("POST", r"^/api/v1/agent/select$", "select"),
-    _r("POST", r"^/api/v1/agent/feedback$", "feedback"),
+    # loops
+    _r("POST", r"^/api/v1/select$", "loop_select"),
+    _r("POST", r"^/api/v1/outcome$", "loop_outcome"),
     # policies
     _r("GET", r"^/api/v1/policies$", "list_policies"),
 )

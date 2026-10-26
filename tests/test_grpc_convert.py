@@ -6,6 +6,7 @@ pytest.importorskip("grpc", reason="install qbrix[grpc] to run gRPC tests")
 
 from qbrix._transport._grpc import _convert as convert
 from qbrix._transport._grpc._proto import common_pb2
+from qbrix._transport._grpc._proto import loop_pb2
 from qbrix._transport._grpc._proto import proxy_pb2
 from qbrix.model.gate import GateConfig
 from qbrix.model.policy import Policy
@@ -145,63 +146,89 @@ class TestGateConfig:
         assert proto.schedule.start_timestamp_ms == 1_781_524_800_000
 
 
-class TestContextAndSelect:
-    def test_context_from_dict(self) -> None:
-        ctx = convert.context_from_dict(
-            {"id": "u1", "vector": [0.1, 0.2], "metadata": {"plan": "pro"}}
-        )
-        assert ctx.id == "u1"
-        assert list(ctx.vector) == [pytest.approx(0.1), pytest.approx(0.2)]
-        assert dict(ctx.metadata) == {"plan": "pro"}
-        assert not ctx.HasField("properties")
-
-    def test_context_properties_keep_their_types(self) -> None:
-        # the whole reason properties travel as a Struct rather than the
-        # string map: cart_value is declared numeric server-side, so a
-        # flattened "62.5" would fail encoding.
-        ctx = convert.context_from_dict(
+class TestLoop:
+    def test_select_request_keeps_property_types(self) -> None:
+        req = convert.loop_select_request(
             {
-                "id": "u2",
-                "properties": {
-                    "device": "mobile",
-                    "cart_value": 62.5,
-                    "returning": True,
+                "loop": "checkout-headline",
+                "context": {
+                    "unit": "u2",
+                    "properties": {"device": "mobile", "cart_value": 62.5},
                 },
             }
         )
-        assert ctx.HasField("properties")
-        assert ctx.properties["cart_value"] == pytest.approx(62.5)
-        assert ctx.properties.fields["cart_value"].WhichOneof("kind") == "number_value"
-        assert ctx.properties.fields["returning"].WhichOneof("kind") == "bool_value"
-        assert ctx.properties["device"] == "mobile"
-        # properties-only: the vector stays empty rather than being invented
-        assert list(ctx.vector) == []
+        assert req.loop == "checkout-headline"
+        assert req.context.unit == "u2"
+        assert req.context.properties["cart_value"] == pytest.approx(62.5)
+        assert req.context.properties["device"] == "mobile"
 
-    def test_context_without_properties_leaves_field_unset(self) -> None:
-        assert not convert.context_from_dict({"id": "u3"}).HasField("properties")
+    def test_select_request_without_properties_leaves_field_unset(self) -> None:
+        req = convert.loop_select_request({"loop": "l", "context": {"unit": "u"}})
+        assert not req.context.HasField("properties")
 
-    def test_select_response_flattens_arm(self) -> None:
-        resp = proxy_pb2.SelectResponse(
-            arm=common_pb2.Arm(id="a1", name="winner", index=3, is_active=True),
+    def test_select_response_restores_ints(self) -> None:
+        resp = loop_pb2.SelectResponse(
+            option=loop_pb2.Option(key="bold", name="Bold"),
             request_id="req_xxx",
-            is_default=False,
+            reason="live",
         )
-        d = convert.select_response_to_dict(resp)
-        # Only id/name/index — matches SelectedArm pydantic shape
-        assert d["arm"] == {"id": "a1", "name": "winner", "index": 3}
-        assert d["request_id"] == "req_xxx"
-        assert d["is_default"] is False
+        resp.option.config.update(
+            {"headline": "Pay", "size": 3, "ratio": 0.5, "items": [1, 2.5]}
+        )
+        assert convert.loop_select_to_dict(resp) == {
+            "option": {
+                "key": "bold",
+                "name": "Bold",
+                "config": {
+                    "headline": "Pay",
+                    "size": 3,
+                    "ratio": 0.5,
+                    "items": [1, 2.5],
+                },
+            },
+            "request_id": "req_xxx",
+            "reason": "live",
+        }
 
     def test_select_response_empty_request_id_becomes_none(self) -> None:
-        # Paused experiment mints no token; proto3 sends "" — normalize to None
-        # for parity with the HTTP transport (SelectResponse.request_id is optional).
-        resp = proxy_pb2.SelectResponse(
-            arm=common_pb2.Arm(id="a1", name="default", index=0),
-            request_id="",
-            is_default=True,
+        resp = loop_pb2.SelectResponse(
+            option=loop_pb2.Option(key="control", name="Control"), reason="draft"
         )
-        d = convert.select_response_to_dict(resp)
-        assert d["request_id"] is None
+        assert convert.loop_select_to_dict(resp)["request_id"] is None
+
+    def test_outcome_request(self) -> None:
+        req = convert.loop_outcome_request(
+            {"request_id": "tok", "value": 1, "id": "evt-1"}
+        )
+        assert req.request_id == "tok"
+        assert req.HasField("value") and req.value == 1.0
+        assert req.id == "evt-1"
+        assert not req.HasField("at")
+
+    def test_outcome_request_sends_zero_value(self) -> None:
+        req = convert.loop_outcome_request({"request_id": "tok", "value": 0})
+        assert req.HasField("value")
+        assert req.id == ""
+
+    def test_outcome_request_at(self) -> None:
+        req = convert.loop_outcome_request(
+            {"request_id": "tok", "value": 1, "at": "2026-10-26T11:30:00+00:00"}
+        )
+        assert req.at.ToMilliseconds() == 1_793_014_200_000
+
+    def test_outcome_request_naive_at_is_utc(self) -> None:
+        req = convert.loop_outcome_request(
+            {"request_id": "tok", "value": 1, "at": "2026-10-26T11:30:00"}
+        )
+        assert req.at.ToMilliseconds() == 1_793_014_200_000
+
+    def test_outcome_response(self) -> None:
+        resp = loop_pb2.OutcomeResponse(id="evt-1")
+        resp.at.FromMilliseconds(1_793_014_200_000)
+        assert convert.loop_outcome_to_dict(resp) == {
+            "id": "evt-1",
+            "at": "2026-10-26T11:30:00+00:00",
+        }
 
 
 class TestPolicy:

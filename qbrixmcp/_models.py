@@ -177,46 +177,6 @@ class TuneExperimentInput(BaseModel):
     )
 
 
-class SelectInput(BaseModel):
-    model_config = _BASE
-
-    experiment_id: str = Field(..., min_length=1)
-    context_id: str = Field(
-        ...,
-        min_length=1,
-        description="stable identifier for the entity being served (user ID, session ID)",
-    )
-    context_properties: dict[str, Any] | None = Field(
-        default=None,
-        description="named properties for contextual policies e.g. {\"device\": \"mobile\", \"cart_value\": 62.5}. Encoded server-side against the experiment's declared context_schema.",
-    )
-    context_vector: list[float] | None = Field(
-        default=None,
-        description="pre-encoded feature vector. Only for experiments created without a context_schema; length must match the 'dim' policy param. Prefer context_properties.",
-    )
-    context_metadata: dict[str, Any] | None = Field(
-        default=None,
-        description="key-value context for gate rule evaluation e.g. {\"plan\": \"premium\", \"country\": \"US\"}",
-    )
-
-
-class FeedbackInput(BaseModel):
-    model_config = _BASE
-
-    request_id: str = Field(
-        ...,
-        min_length=1,
-        description="request_id from qbrix_select — pass unchanged (HMAC-signed token)",
-    )
-    reward: float = Field(
-        ...,
-        description=(
-            "observed outcome. Binary: 1.0 or 0.0. "
-            "Continuous: actual metric value. Bounded: 0.0–1.0."
-        ),
-    )
-
-
 class CreatePoolInput(BaseModel):
     model_config = _BASE
 

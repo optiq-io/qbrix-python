@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from functools import cached_property
 from typing import Any
 from typing import Literal
 from typing import TYPE_CHECKING
 
 from qbrix._config import QbrixConfig
-from qbrix.resource.agent import AgentResource
-from qbrix.resource.agent import AsyncAgentResource
+from qbrix.model.common import Context
+from qbrix.model.decision import Decision
+from qbrix.model.decision import Outcome
+from qbrix.model.decision import Settings
+from qbrix.resource.decision import AsyncDecisionResource
+from qbrix.resource.decision import DecisionResource
 from qbrix.resource.experiment import AsyncExperimentResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import AsyncGateResource
@@ -107,10 +112,10 @@ class Qbrix:
     Usage::
 
         with Qbrix(api_key="optiq_xxx") as client:
-            result = client.agent.select("exp-id", context={"id": "user-1"})
-            client.agent.feedback(result.request_id, reward=1.0)
+            decision = client.select("checkout-headline", context={"unit": "user-1"})
+            client.outcome(decision.request_id, 1)
 
-    Transport selection (HTTP default; gRPC support landing in Phase 4):
+    Transport selection (HTTP default):
 
     - ``Qbrix(transport="http")`` or ``Qbrix(transport="grpc")``
     - ``QBRIX_TRANSPORT`` env var
@@ -184,8 +189,32 @@ class Qbrix:
         return GateResource(self)
 
     @cached_property
-    def agent(self) -> AgentResource:
-        return AgentResource(self)
+    def _decision(self) -> DecisionResource:
+        return DecisionResource(self)
+
+    def select(
+        self,
+        loop: str,
+        context: Context | dict[str, Any],
+        settings: Settings | dict[str, Any] | None = None,
+    ) -> Decision:
+        """ask a loop for a decision; never raises when qbrix can't be reached."""
+        return self._decision.select(loop, context, settings)
+
+    def outcome(
+        self,
+        request_id: str | None,
+        value: int | float,
+        *,
+        id: str | None = None,
+        at: datetime | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> Outcome | None:
+        """report what happened after one decision; a None request_id sends nothing."""
+        return self._decision.outcome(
+            request_id, value, id=id, at=at, timeout=timeout, max_retries=max_retries
+        )
 
     @cached_property
     def policy(self) -> PolicyResource:
@@ -202,8 +231,8 @@ class AsyncQbrix:
     Usage::
 
         async with AsyncQbrix(api_key="optiq_xxx") as client:
-            result = await client.agent.select("exp-id", context={"id": "user-1"})
-            await client.agent.feedback(result.request_id, reward=1.0)
+            decision = await client.select("checkout-headline", context={"unit": "user-1"})
+            await client.outcome(decision.request_id, 1)
     """
 
     _transport: AsyncTransport
@@ -272,8 +301,32 @@ class AsyncQbrix:
         return AsyncGateResource(self)
 
     @cached_property
-    def agent(self) -> AsyncAgentResource:
-        return AsyncAgentResource(self)
+    def _decision(self) -> AsyncDecisionResource:
+        return AsyncDecisionResource(self)
+
+    async def select(
+        self,
+        loop: str,
+        context: Context | dict[str, Any],
+        settings: Settings | dict[str, Any] | None = None,
+    ) -> Decision:
+        """ask a loop for a decision; never raises when qbrix can't be reached."""
+        return await self._decision.select(loop, context, settings)
+
+    async def outcome(
+        self,
+        request_id: str | None,
+        value: int | float,
+        *,
+        id: str | None = None,
+        at: datetime | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> Outcome | None:
+        """report what happened after one decision; a None request_id sends nothing."""
+        return await self._decision.outcome(
+            request_id, value, id=id, at=at, timeout=timeout, max_retries=max_retries
+        )
 
     @cached_property
     def policy(self) -> AsyncPolicyResource:

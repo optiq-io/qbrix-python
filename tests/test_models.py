@@ -3,12 +3,10 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from qbrix.model.agent import FeedbackRequest
-from qbrix.model.agent import SelectedArm
-from qbrix.model.agent import SelectRequest
-from qbrix.model.agent import SelectResponse
 from qbrix.model.common import Context
 from qbrix.model.common import PaginatedResponse
+from qbrix.model.decision import Decision
+from qbrix.model.decision import Settings
 from qbrix.model.experiment import Experiment
 from qbrix.model.experiment import ExperimentCreate
 from qbrix.model.experiment import ExperimentUpdate
@@ -25,54 +23,23 @@ from qbrix.model.pool import PoolUpdate
 @pytest.mark.unit
 class TestContext:
     def test_minimal(self) -> None:
-        ctx = Context(id="user-1")
-        assert ctx.id == "user-1"
-        assert ctx.properties is None
-        assert ctx.vector is None
-        assert ctx.metadata is None
-
-    def test_full(self) -> None:
-        ctx = Context(id="u-2", vector=[0.1, 0.5], metadata={"plan": "pro"})
-        assert ctx.vector == [0.1, 0.5]
-        assert ctx.metadata == {"plan": "pro"}
-
-    def test_properties(self) -> None:
-        ctx = Context(id="u-4", properties={"device": "mobile", "price": 20})
-        assert ctx.properties == {"device": "mobile", "price": 20}
-        assert ctx.vector is None
+        ctx = Context(unit="user-1")
+        assert ctx.unit == "user-1"
+        assert ctx.model_dump(exclude_none=True) == {"unit": "user-1"}
 
     def test_properties_preserve_value_types(self) -> None:
-        # the server encodes a numeric property against a declared range, so
-        # the SDK must not coerce 20 to "20" on the way in.
-        ctx = Context(id="u-5", properties={"price": 20, "returning": True})
-        assert ctx.properties["price"] == 20
+        ctx = Context(unit="u-5", properties={"price": 20, "returning": True})
+        assert ctx.properties == {"price": 20, "returning": True}
         assert isinstance(ctx.properties["price"], int)
-        assert ctx.properties["returning"] is True
 
-    def test_vector_and_properties_together_rejected(self) -> None:
-        with pytest.raises(ValidationError, match="not both"):
-            Context(id="u-6", vector=[0.1], properties={"device": "mobile"})
+    @pytest.mark.parametrize("unit", ["", "  ", "u" * 257])
+    def test_invalid_unit_rejected(self, unit: str) -> None:
+        with pytest.raises(ValidationError):
+            Context(unit=unit)
 
-    def test_properties_with_metadata_is_fine(self) -> None:
-        # metadata targets the gate, properties feed the strategy — different
-        # channels, no conflict.
-        ctx = Context(
-            id="u-7", properties={"device": "mobile"}, metadata={"plan": "pro"}
-        )
-        assert ctx.properties == {"device": "mobile"}
-        assert ctx.metadata == {"plan": "pro"}
-
-    def test_field_order_leads_with_properties(self) -> None:
-        # the escape hatch comes last so an editor completes the encouraged
-        # path first; mirrors the proxy's ContextModel.
-        assert list(Context.model_fields) == ["id", "properties", "metadata", "vector"]
-
-    def test_exclude_none_serialization(self) -> None:
-        ctx = Context(id="u-3")
-        dumped = ctx.model_dump(exclude_none=True)
-        assert "vector" not in dumped
-        assert "properties" not in dumped
-        assert "metadata" not in dumped
+    def test_unit_required(self) -> None:
+        with pytest.raises(ValidationError):
+            Context.model_validate({"properties": {"device": "mobile"}})
 
 
 @pytest.mark.unit
@@ -191,34 +158,21 @@ class TestGateModels:
 
 
 @pytest.mark.unit
-class TestAgentModels:
-    def test_select_request(self) -> None:
-        sr = SelectRequest(experiment_id="e1", context=Context(id="u-1"))
-        assert sr.experiment_id == "e1"
-
-    def test_select_response(self) -> None:
-        resp = SelectResponse(
-            arm=SelectedArm(id="a1", name="blue", index=1),
-            request_id="tok_abc",
-            is_default=False,
+class TestDecisionModels:
+    def test_decision_from_dict(self) -> None:
+        decision = Decision.model_validate(
+            {
+                "option": {"key": "bold", "name": "Bold", "config": {"n": 3}},
+                "request_id": None,
+                "reason": "draft",
+            }
         )
-        assert resp.arm.name == "blue"
-        assert resp.is_default is False
+        assert decision.option is not None
+        assert decision.option.config == {"n": 3}
+        assert decision.request_id is None
 
-    def test_select_response_from_dict(self) -> None:
-        data = {
-            "arm": {"id": "a1", "name": "red", "index": 0},
-            "request_id": "tok_xyz",
-            "is_default": True,
-        }
-        resp = SelectResponse.model_validate(data)
-        assert resp.arm.index == 0
-        assert resp.is_default is True
-
-    def test_feedback_request(self) -> None:
-        fr = FeedbackRequest(request_id="tok_abc", reward=1.0)
-        assert fr.reward == 1.0
-
-    def test_feedback_request_int_reward(self) -> None:
-        fr = FeedbackRequest(request_id="tok_abc", reward=1)
-        assert fr.reward == 1
+    def test_settings_offline_needs_only_a_key(self) -> None:
+        settings = Settings.model_validate({"offline": {"key": "control"}})
+        assert settings.offline is not None
+        assert settings.offline.config == {}
+        assert settings.offline.name is None

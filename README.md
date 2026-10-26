@@ -17,58 +17,70 @@
 
 ---
 
-Typed sync and async clients for [Qbrix](https://qbrix.io) — pool/experiment/gate management and the agent select/feedback loop.
+> [!WARNING]
+> **This is a pre-release for qbrix next.** It speaks only to a qbrix server with next switched on (`PROXY_NEXT_ENABLED=true`), and it can break between phases. `pip install qbrix` keeps installing the stable 0.3.x.
+
+<!-- next-target -->
+Built against **qbrix next · phase 1 (Skeleton)**, server [`optiq-io/qbrix@372219e`](https://github.com/optiq-io/qbrix/commit/372219e).
+<!-- /next-target -->
+
+Typed sync and async clients for [qbrix](https://qbrix.io): ask a loop for a decision, and report what happened.
 
 ## Installation
 
-The SDK speaks to the qbrix proxy over either HTTP/JSON or gRPC — pick a transport (or install both):
-
 ```bash
-pip install qbrix[http]   # HTTP/JSON transport (httpx)
-pip install qbrix[grpc]   # gRPC transport (grpcio)
-pip install qbrix[all]    # both
+pip install --pre "qbrix[http]"   # HTTP/JSON transport (httpx)
+pip install --pre "qbrix[grpc]"   # gRPC transport (grpcio)
+pip install --pre "qbrix[all]"    # both
 ```
-
-`pip install qbrix` with no extra installs only the models and config layer — constructing a client then raises a clear `ImportError` naming the extra to add.
 
 ## Quick Start
 
-Set your credentials as environment variables and call resources directly — no client instantiation needed:
+```python
+from qbrix import Qbrix
 
-```bash
-export QBRIX_API_KEY="optiq_xxx"
-export QBRIX_BASE_URL="http://localhost:8000"
+client = Qbrix(api_key="optiq_…", base_url="https://qbrix.example.com")
+decision = client.select(
+    "checkout-headline",
+    context={"unit": "user-1", "properties": {"device": "mobile"}},
+    settings={"offline": {"key": "control", "config": {"headline": "Checkout"}}},
+)
+decision.option.config     # what to render
+decision.reason            # "live", "draft", "paused" or "offline"
+client.outcome(decision.request_id, 1)
 ```
+
+- **`select(loop, context, settings=None)`** takes the loop's key or id. `context.unit` says who the decision is for and is required; the SDK checks it before any call. `properties` are what the app knows about the request: device, plan, country. It returns a `Decision(option, request_id, reason)`.
+- **`request_id`** is there only when the decision can learn: a live loop. A draft or paused loop answers its fallback without one.
+- **`outcome(request_id, value, *, id=None, at=None)`** reports what happened after one decision. The value must fit the loop's metric (a conversion is 0 or 1). A `None` request_id sends nothing, so call it unconditionally. Each call carries an event `id`, minted by the SDK when you don't pass one, so a retried call counts once. `at` is a `datetime` for when it happened; without one, qbrix uses the time it receives the outcome.
+
+## When qbrix can't be reached
+
+`select` never raises because qbrix is down. On a connection error, a timeout, a 429 or a 5xx (gRPC `UNAVAILABLE`, `DEADLINE_EXCEEDED`), it returns your `offline` option with reason `offline` and no `request_id`, or `option=None` when you gave none. Errors in the call itself still raise, because they are bugs to fix: a missing unit, a bad key (`AuthenticationError`) or an unknown loop (`NotFoundError`, with the server's message).
 
 ```python
-import qbrix
-
-# 1. Create a pool of arms (variants)
-pool = qbrix.pool.create(
-    name="homepage-buttons",
-    arms=[{"name": "blue"}, {"name": "green"}, {"name": "red"}],
+decision = client.select(
+    "checkout-headline",
+    context={"unit": "user-1"},
+    settings={
+        "offline": {"key": "control", "config": {"headline": "Checkout"}},
+        "timeout": 0.3,
+        "max_retries": 0,
+    },
 )
-
-# 2. Create an experiment with a bandit policy
-exp = qbrix.experiment.create(
-    name="button-color-test",
-    pool_id=pool.id,
-    policy="BetaTSPolicy",
-)
-
-# 3. Select an arm for a user
-result = qbrix.agent.select(
-    experiment_id=exp.id,
-    context={"id": "user-123", "metadata": {"country": "US"}},
-)
-print(result.arm.name)       # "green"
-print(result.is_default)     # False (bandit selected)
-
-# 4. Send feedback (reward) after observing the outcome
-qbrix.agent.feedback(request_id=result.request_id, reward=1.0)
 ```
 
-The system learns from every reward and adjusts future selections automatically.
+`settings` keeps the select call on your request path within budget: `timeout` and `max_retries` override the client's for this call only. See [`examples/offline.py`](examples/offline.py).
+
+## Async
+
+```python
+from qbrix import AsyncQbrix
+
+async with AsyncQbrix(api_key="optiq_…") as client:
+    decision = await client.select("checkout-headline", context={"unit": "user-1"})
+    await client.outcome(decision.request_id, 1)
+```
 
 ## Self-hosted qbrix
 
@@ -108,36 +120,7 @@ When `transport` is omitted it's resolved in this order: the `transport=` kwarg 
 
 gRPC needs a directly-reachable proxy gRPC endpoint. An install served over HTTPS behind a gateway or CDN usually does **not** expose gRPC — use `transport="http"` for it. Reach for gRPC against a local proxy (`grpc://localhost:50050`) or a service deployed alongside the proxy.
 
-The gRPC transport covers **pool, experiment, gate, agent, and policy** operations. The `runtime` resource is HTTP-only (the proxy doesn't expose it over gRPC) — calling it on a gRPC client raises `NotImplementedError`. Install `qbrix[all]` and use `transport="http"` if you need it.
-
-## Explicit Client
-
-For full control over configuration or lifecycle (e.g. closing the transport connection, using a context manager), instantiate the client directly:
-
-```python
-from qbrix import Qbrix
-
-with Qbrix(api_key="optiq_xxx", base_url="http://localhost:8000") as client:
-    pool = client.pool.create(
-        name="homepage-buttons",
-        arms=[{"name": "blue"}, {"name": "green"}, {"name": "red"}],
-    )
-    result = client.agent.select(experiment_id="exp-uuid", context={"id": "user-123"})
-    client.agent.feedback(request_id=result.request_id, reward=1.0)
-```
-
-## Async
-
-```python
-from qbrix import AsyncQbrix
-
-async with AsyncQbrix(api_key="optiq_xxx") as client:
-    result = await client.agent.select(
-        experiment_id="exp-uuid",
-        context={"id": "user-456"},
-    )
-    await client.agent.feedback(request_id=result.request_id, reward=1.0)
-```
+The gRPC transport covers `select`, `outcome`, and the pool, experiment, gate and policy operations. The `runtime` resource is HTTP-only (the proxy doesn't expose it over gRPC) — calling it on a gRPC client raises `NotImplementedError`. Install `qbrix[all]` and use `transport="http"` if you need it.
 
 ## Configuration
 
@@ -164,90 +147,20 @@ client = Qbrix()  # picks up env vars automatically
 
 gRPC-only knobs: `QBRIX_GRPC_KEEPALIVE_TIME_MS` (`30000`), `QBRIX_GRPC_KEEPALIVE_TIMEOUT_MS` (`10000`), `QBRIX_GRPC_USE_TLS` (`false`).
 
-`timeout` and `max_retries` can also be overridden per call on every resource method — useful for
-hot-path calls like `agent.select()` that need a tighter budget than the rest of the client:
+## Errors
 
 ```python
-result = qbrix.agent.select(
-    experiment_id=exp.id,
-    context={"id": "user-1"},
-    timeout=0.3,
-    max_retries=0,
-    fallback={"id": pool.arms[0].id, "name": pool.arms[0].name, "index": pool.arms[0].index},
-)
-if result.is_fallback:
-    # proxy was unreachable/unhealthy — arm was resolved locally, no learning signal
-    ...
-qbrix.agent.feedback(result.request_id, reward=1.0)  # no-op when request_id is None
-```
-
-`fallback` only kicks in for availability failures (timeout, connection error, 429, 5xx) — a 4xx caller error still raises even with `fallback` set, so it doesn't get hidden behind a fabricated selection. See [`examples/handling_outages.py`](examples/handling_outages.py) for a runnable version, and [qbrix.io/docs/handling-outages](https://qbrix.io/docs/handling-outages) for the full contract.
-
-## Feature Gates
-
-Attach a feature gate to control rollout before the bandit kicks in:
-
-```python
-import qbrix
-
-qbrix.gate.create(
-    experiment_id=exp.id,
-    enabled=True,
-    rollout_percentage=80.0,
-    default_arm_id=pool.arms[0].id,
-    rules=[
-        {"key": "plan", "operator": "==", "value": "enterprise", "arm_id": pool.arms[1].id},
-    ],
-)
-
-# Gate-matched selections return is_default=True
-result = qbrix.agent.select(
-    experiment_id=exp.id,
-    context={"id": "user-789", "metadata": {"plan": "enterprise"}},
-)
-print(result.is_default)  # True
-```
-
-## Error Handling
-
-```python
-import qbrix
-from qbrix import NotFoundError, RateLimitedError
+from qbrix import BadRequestError, NotFoundError
 
 try:
-    exp = qbrix.experiment.get("nonexistent-id")
-except NotFoundError as e:
-    print(f"Not found: {e.detail}")
-except RateLimitedError as e:
-    print(f"Retry after {e.retry_after}s")
+    client.outcome(decision.request_id, 2)
+except BadRequestError as e:
+    print(e.detail)  # "a conversion is 0 or 1, got 2"
 ```
 
-## Supported Policies
+## Today's API
 
-| Policy                | Type        | Best For                             |
-|-----------------------|-------------|--------------------------------------|
-| `BetaTSPolicy`        | Stochastic  | Binary rewards (clicks, conversions) |
-| `DiscountedTSPolicy`  | Stochastic  | Binary rewards that drift over time  |
-| `GaussianTSPolicy`    | Stochastic  | Continuous rewards                   |
-| `DirichletTSPolicy`   | Stochastic  | Categorical / multi-outcome rewards  |
-| `LogisticTSPolicy`    | Contextual  | Binary rewards with features         |
-| `UCB1TunedPolicy`     | Stochastic  | Theoretical regret guarantees        |
-| `KLUCBPolicy`         | Stochastic  | Binary rewards with tight bounds     |
-| `KLUCBPlusPolicy`     | Stochastic  | Tighter KL-UCB for long horizons     |
-| `MOSSPolicy`          | Stochastic  | Fixed horizon problems               |
-| `MOSSAnyTimePolicy`   | Stochastic  | Unknown horizon                      |
-| `EpsilonPolicy`       | Stochastic  | Simple, predictable exploration      |
-| `LinUCBPolicy`        | Contextual  | Linear reward models with features   |
-| `LinTSPolicy`         | Contextual  | Linear models with uncertainty       |
-| `GLMUCBPolicy`        | Contextual  | Generalised linear reward models     |
-| `EXP3Policy`          | Adversarial | Non-stationary environments          |
-| `EXP3IXPolicy`        | Adversarial | EXP3 with lower-variance estimates   |
-| `FPLPolicy`           | Adversarial | Follow the perturbed leader          |
-| `RandomPolicy`        | Baseline    | A/B-style control for benchmarking   |
-| `MetaBanditPolicy`    | Meta        | Delegates to `policy="auto"`         |
-
-Pass `policy="auto"` to let qbrix pick and tune a policy for you (backed by
-`MetaBanditPolicy`). `client.policy.list()` is the runtime source of truth.
+The pool, experiment, gate and policy resources still talk to today's API until it is retired; the migration guide arrives with the release. `client.agent` is gone from this pre-release: use `select` and `outcome`.
 
 ## License
 

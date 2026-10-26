@@ -62,8 +62,8 @@ class TestRouteCoverage:
                 "delete_gate_config",
                 {"experiment_id": "e1"},
             ),
-            ("POST", "/api/v1/agent/select", "select", {}),
-            ("POST", "/api/v1/agent/feedback", "feedback", {}),
+            ("POST", "/api/v1/select", "loop_select", {}),
+            ("POST", "/api/v1/outcome", "loop_outcome", {}),
             ("GET", "/api/v1/policies", "list_policies", {}),
         ],
     )

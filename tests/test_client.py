@@ -4,8 +4,8 @@ import pytest
 
 from qbrix._client import AsyncQbrix
 from qbrix._client import Qbrix
-from qbrix.resource.agent import AgentResource
-from qbrix.resource.agent import AsyncAgentResource
+from qbrix.resource.decision import AsyncDecisionResource
+from qbrix.resource.decision import DecisionResource
 from qbrix.resource.experiment import AsyncExperimentResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import AsyncGateResource
@@ -21,13 +21,14 @@ class TestQbrix:
         assert isinstance(client.pool, PoolResource)
         assert isinstance(client.experiment, ExperimentResource)
         assert isinstance(client.gate, GateResource)
-        assert isinstance(client.agent, AgentResource)
+        assert isinstance(client._decision, DecisionResource)
+        assert not hasattr(client, "agent")
         client.close()
 
     def test_cached_property_returns_same_instance(self) -> None:
         client = Qbrix(api_key="optiq_test")
         assert client.pool is client.pool
-        assert client.agent is client.agent
+        assert client._decision is client._decision
         client.close()
 
     def test_config_passthrough(self) -> None:
@@ -66,7 +67,8 @@ class TestAsyncQbrix:
         assert isinstance(client.pool, AsyncPoolResource)
         assert isinstance(client.experiment, AsyncExperimentResource)
         assert isinstance(client.gate, AsyncGateResource)
-        assert isinstance(client.agent, AsyncAgentResource)
+        assert isinstance(client._decision, AsyncDecisionResource)
+        assert not hasattr(client, "agent")
 
     def test_config_passthrough(self) -> None:
         client = AsyncQbrix(

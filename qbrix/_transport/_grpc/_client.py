@@ -4,7 +4,7 @@ Implements the same ``Transport`` interface (``get`` / ``post`` / ``put`` /
 ``patch`` / ``delete`` + low-level ``request``) as
 ``qbrix._transport._http.HTTPTransport``. Resources never see the wire
 difference — they hand off HTTP-shaped paths and the route table here maps
-them to ``ProxyService`` RPCs.
+them to ``ProxyService`` and ``LoopService`` RPCs.
 
 Channel options and metadata mirror the upstream gRPC client patterns in
 ``/Users/eskinmi/Dev/qbrix/svc/proxy/src/proxysvc/client.py``.
@@ -26,6 +26,8 @@ from qbrix._transport._base import Transport
 from qbrix._transport._grpc._error import is_retryable
 from qbrix._transport._grpc._error import make_grpc_error
 from qbrix._transport._grpc._handlers import HANDLERS
+from qbrix._transport._grpc._handlers import Handler
+from qbrix._transport._grpc._proto import loop_pb2_grpc
 from qbrix._transport._grpc._proto import proxy_pb2_grpc
 from qbrix._transport._grpc._routes import match
 from qbrix._transport._http._client import BaseClient
@@ -56,6 +58,9 @@ def _is_tls(base_url: str, use_tls: bool) -> bool:
 class _BaseGRPCTransport(BaseClient):
     """Shared init / config / metadata. Subclasses pick sync vs async channel."""
 
+    _stub: proxy_pb2_grpc.ProxyServiceStub
+    _loop_stub: loop_pb2_grpc.LoopServiceStub
+
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._target = _parse_target(self._config.base_url)
@@ -85,15 +90,18 @@ class _BaseGRPCTransport(BaseClient):
             meta.append(("x-api-key", self._config.api_key))
         return meta
 
+    def _stub_for(self, service: str) -> Any:
+        return self._loop_stub if service == "loop" else self._stub
+
 
 def _dispatch_prepare(
     method: str, path: str, body: dict[str, Any] | None, params: dict[str, Any] | None
-) -> tuple[Any, str, Any, dict[str, str]]:
-    """Resolve route, build proto request, return (request, stub_attr, converter, path_params)."""
+) -> tuple[Any, Handler, dict[str, str]]:
+    """Resolve route, build proto request, return (request, handler, path_params)."""
     handler_name, path_params = match(method, path)
     handler = HANDLERS[handler_name]
     req = handler.build_request(body or {}, params or {}, path_params)
-    return req, handler.stub_attr, handler.convert_response, path_params
+    return req, handler, path_params
 
 
 def _finalize(
@@ -109,7 +117,6 @@ class GRPCTransport(_BaseGRPCTransport, Transport):
     """Synchronous gRPC transport."""
 
     _channel: grpc.Channel
-    _stub: proxy_pb2_grpc.ProxyServiceStub
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -122,16 +129,18 @@ class GRPCTransport(_BaseGRPCTransport, Transport):
         else:
             self._channel = grpc.insecure_channel(self._target, options=options)
         self._stub = proxy_pb2_grpc.ProxyServiceStub(self._channel)
+        self._loop_stub = loop_pb2_grpc.LoopServiceStub(self._channel)
 
     def _call(
         self,
+        service: str,
         stub_attr: str,
         req: Any,
         *,
         timeout: float | None = None,
         max_retries: int | None = None,
     ) -> Any:
-        stub_method = getattr(self._stub, stub_attr)
+        stub_method = getattr(self._stub_for(service), stub_attr)
         last_exc: QbrixAPIError | None = None
         effective_timeout = timeout if timeout is not None else self._config.timeout
         effective_max_retries = (
@@ -165,11 +174,15 @@ class GRPCTransport(_BaseGRPCTransport, Transport):
         timeout: float | None = None,
         max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        req, stub_attr, converter, path_params = _dispatch_prepare(
-            method, path, body, params
+        req, handler, path_params = _dispatch_prepare(method, path, body, params)
+        resp = self._call(
+            handler.service,
+            handler.stub_attr,
+            req,
+            timeout=timeout,
+            max_retries=max_retries,
         )
-        resp = self._call(stub_attr, req, timeout=timeout, max_retries=max_retries)
-        return _finalize(converter(resp, path_params), cast_to)
+        return _finalize(handler.convert_response(resp, path_params), cast_to)
 
     def get(
         self,
@@ -266,7 +279,6 @@ class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
     """Asynchronous gRPC transport."""
 
     _channel: grpc.aio.Channel
-    _stub: proxy_pb2_grpc.ProxyServiceStub
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -279,16 +291,18 @@ class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
         else:
             self._channel = grpc.aio.insecure_channel(self._target, options=options)
         self._stub = proxy_pb2_grpc.ProxyServiceStub(self._channel)
+        self._loop_stub = loop_pb2_grpc.LoopServiceStub(self._channel)
 
     async def _call(
         self,
+        service: str,
         stub_attr: str,
         req: Any,
         *,
         timeout: float | None = None,
         max_retries: int | None = None,
     ) -> Any:
-        stub_method = getattr(self._stub, stub_attr)
+        stub_method = getattr(self._stub_for(service), stub_attr)
         last_exc: QbrixAPIError | None = None
         effective_timeout = timeout if timeout is not None else self._config.timeout
         effective_max_retries = (
@@ -321,13 +335,15 @@ class AsyncGRPCTransport(_BaseGRPCTransport, AsyncTransport):
         timeout: float | None = None,
         max_retries: int | None = None,
     ) -> _T | dict[str, Any]:
-        req, stub_attr, converter, path_params = _dispatch_prepare(
-            method, path, body, params
-        )
+        req, handler, path_params = _dispatch_prepare(method, path, body, params)
         resp = await self._call(
-            stub_attr, req, timeout=timeout, max_retries=max_retries
+            handler.service,
+            handler.stub_attr,
+            req,
+            timeout=timeout,
+            max_retries=max_retries,
         )
-        return _finalize(converter(resp, path_params), cast_to)
+        return _finalize(handler.convert_response(resp, path_params), cast_to)
 
     async def get(
         self,

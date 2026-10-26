@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+from datetime import timezone
 from unittest.mock import patch
 
 import pytest
@@ -9,8 +11,10 @@ pytest.importorskip("grpc", reason="install qbrix[grpc] to run gRPC tests")
 import grpc
 
 from qbrix._transport._grpc._proto import common_pb2
+from qbrix._transport._grpc._proto import loop_pb2
 from qbrix._transport._grpc._proto import proxy_pb2
-from qbrix.model.common import Context
+from qbrix.model.decision import Decision
+from qbrix.model.decision import Option
 from qbrix.model.experiment import Experiment
 from qbrix.model.gate import GateConfig
 from qbrix.model.pool import Pool
@@ -166,56 +170,153 @@ class TestGateViaGRPC:
         assert gc.experiment_id == "e_999"
 
 
-class TestAgentViaGRPC:
-    def test_select_and_feedback(self, grpc_client) -> None:
-        grpc_client._stub.Select.return_value = proxy_pb2.SelectResponse(
-            arm=common_pb2.Arm(id="a1", name="winner", index=2),
+class TestLoopViaGRPC:
+    def test_select_and_outcome(self, grpc_client) -> None:
+        from qbrix.resource.decision import DecisionResource
+
+        resp = loop_pb2.SelectResponse(
+            option=loop_pb2.Option(key="bold", name="Bold"),
             request_id="req_signed_xyz",
-            is_default=False,
+            reason="live",
         )
-        grpc_client._stub.Feedback.return_value = proxy_pb2.FeedbackResponse(
-            accepted=True
+        resp.option.config.update({"headline": "Pay now", "size": 3})
+        grpc_client._loop_stub.Select.return_value = resp
+        accepted = loop_pb2.OutcomeResponse(id="evt-1")
+        accepted.at.FromMilliseconds(1_793_014_200_000)
+        grpc_client._loop_stub.Outcome.return_value = accepted
+
+        resource = DecisionResource(grpc_client)
+        decision = resource.select(
+            "checkout-headline", {"unit": "u_1", "properties": {"plan": "pro"}}
         )
-        from qbrix.resource.agent import AgentResource
-
-        resource = AgentResource(grpc_client)
-        result = resource.select("e_abc", {"id": "u_1", "metadata": {"plan": "pro"}})
-        assert result.arm.id == "a1"
-        assert result.arm.name == "winner"
-        assert result.request_id == "req_signed_xyz"
-
-        # Feedback returns None (the resource discards the response)
-        assert resource.feedback(result.request_id, 1.0) is None
-
-        select_req = grpc_client._stub.Select.call_args.args[0]
-        assert select_req.experiment_id == "e_abc"
-        assert select_req.context.id == "u_1"
-        assert dict(select_req.context.metadata) == {"plan": "pro"}
-
-    def test_select_with_properties(self, grpc_client) -> None:
-        grpc_client._stub.Select.return_value = proxy_pb2.SelectResponse(
-            arm=common_pb2.Arm(id="a2", name="express", index=1),
-            request_id="req_signed_ctx",
-            is_default=False,
-        )
-        from qbrix.resource.agent import AgentResource
-
-        resource = AgentResource(grpc_client)
-        result = resource.select(
-            "e_ctx",
-            Context(
-                id="visitor-1", properties={"device": "mobile", "cart_value": 62.5}
+        assert decision == Decision(
+            option=Option(
+                key="bold", name="Bold", config={"headline": "Pay now", "size": 3}
             ),
+            request_id="req_signed_xyz",
+            reason="live",
         )
-        assert result.arm.name == "express"
+        outcome = resource.outcome(decision.request_id, 1)
+        assert outcome is not None and outcome.id == "evt-1"
+        assert outcome.at == datetime(2026, 10, 26, 11, 30, tzinfo=timezone.utc)
 
-        select_req = grpc_client._stub.Select.call_args.args[0]
-        assert select_req.context.HasField("properties")
-        assert select_req.context.properties["cart_value"] == pytest.approx(62.5)
-        assert select_req.context.properties["device"] == "mobile"
-        # a properties-only context must not put an empty vector on the wire in
-        # a way the server could read as both channels being supplied
-        assert list(select_req.context.vector) == []
+        select_req = grpc_client._loop_stub.Select.call_args.args[0]
+        assert select_req.loop == "checkout-headline"
+        assert select_req.context.unit == "u_1"
+        assert select_req.context.properties["plan"] == "pro"
+        outcome_req = grpc_client._loop_stub.Outcome.call_args.args[0]
+        assert outcome_req.request_id == "req_signed_xyz"
+        assert outcome_req.value == 1.0
+        assert len(outcome_req.id) == 32
+        grpc_client._stub.Select.assert_not_called()
+
+    def test_draft_has_no_request_id(self, grpc_client) -> None:
+        from qbrix.resource.decision import DecisionResource
+
+        grpc_client._loop_stub.Select.return_value = loop_pb2.SelectResponse(
+            option=loop_pb2.Option(key="control", name="Control"), reason="draft"
+        )
+        decision = DecisionResource(grpc_client).select("l", {"unit": "u"})
+        assert decision.request_id is None
+        assert decision.reason == "draft"
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            grpc.StatusCode.UNAVAILABLE,
+            grpc.StatusCode.DEADLINE_EXCEEDED,
+            grpc.StatusCode.RESOURCE_EXHAUSTED,
+            grpc.StatusCode.INTERNAL,
+        ],
+    )
+    def test_unreachable_returns_offline_option(self, grpc_client, code) -> None:
+        from qbrix.resource.decision import DecisionResource
+
+        grpc_client._loop_stub.Select.side_effect = _FakeRpcError(code, "down")
+        decision = DecisionResource(grpc_client).select(
+            "l", {"unit": "u"}, {"offline": {"key": "control"}}
+        )
+        assert decision == Decision(
+            option=Option(key="control"), request_id=None, reason="offline"
+        )
+
+    def test_unknown_loop_raises(self, grpc_client) -> None:
+        from qbrix.exception import NotFoundError
+        from qbrix.resource.decision import DecisionResource
+
+        grpc_client._loop_stub.Select.side_effect = _FakeRpcError(
+            grpc.StatusCode.NOT_FOUND, "no loop with the key or id 'nope'"
+        )
+        with pytest.raises(NotFoundError, match="no loop with the key or id 'nope'"):
+            DecisionResource(grpc_client).select(
+                "nope", {"unit": "u"}, {"offline": {"key": "control"}}
+            )
+
+    def test_invalid_outcome_raises_with_the_rule(self, grpc_client) -> None:
+        from qbrix.exception import BadRequestError
+        from qbrix.resource.decision import DecisionResource
+
+        grpc_client._loop_stub.Outcome.side_effect = _FakeRpcError(
+            grpc.StatusCode.INVALID_ARGUMENT, "a conversion is 0 or 1, got 2"
+        )
+        with pytest.raises(BadRequestError, match="a conversion is 0 or 1, got 2"):
+            DecisionResource(grpc_client).outcome("tok", 2)
+
+    def test_retried_outcome_sends_the_same_id(self) -> None:
+        from unittest.mock import MagicMock
+
+        from qbrix._transport._grpc import GRPCTransport
+        from qbrix.resource.decision import DecisionResource
+
+        with (
+            patch("qbrix._transport._grpc._client.grpc.insecure_channel"),
+            patch("qbrix._transport._grpc._client.time.sleep"),
+        ):
+            client = GRPCTransport(
+                api_key="optiq_test", base_url="localhost:50050", max_retries=1
+            )
+            client._loop_stub = MagicMock()
+            client._loop_stub.Outcome.side_effect = [
+                _FakeRpcError(grpc.StatusCode.UNAVAILABLE, "down"),
+                loop_pb2.OutcomeResponse(id="evt-1"),
+            ]
+            DecisionResource(client).outcome("tok", 1)
+        first, second = client._loop_stub.Outcome.call_args_list
+        assert first.args[0].id == second.args[0].id
+
+
+@pytest.mark.asyncio
+class TestAsyncLoopViaGRPC:
+    async def test_select(self, async_grpc_client) -> None:
+        from unittest.mock import AsyncMock
+
+        from qbrix.resource.decision import AsyncDecisionResource
+
+        resp = loop_pb2.SelectResponse(
+            option=loop_pb2.Option(key="bold", name="Bold"),
+            request_id="req",
+            reason="live",
+        )
+        resp.option.config.update({"size": 3})
+        async_grpc_client._loop_stub.Select = AsyncMock(return_value=resp)
+        decision = await AsyncDecisionResource(async_grpc_client).select(
+            "l", {"unit": "u"}
+        )
+        assert decision.option is not None and decision.option.config == {"size": 3}
+        assert decision.request_id == "req"
+
+    async def test_unreachable_returns_offline_option(self, async_grpc_client) -> None:
+        from unittest.mock import AsyncMock
+
+        from qbrix.resource.decision import AsyncDecisionResource
+
+        async_grpc_client._loop_stub.Select = AsyncMock(
+            side_effect=_FakeRpcError(grpc.StatusCode.UNAVAILABLE, "down")
+        )
+        decision = await AsyncDecisionResource(async_grpc_client).select(
+            "l", {"unit": "u"}
+        )
+        assert decision == Decision(option=None, request_id=None, reason="offline")
 
 
 class TestPolicyViaGRPC:

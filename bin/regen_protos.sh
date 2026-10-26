@@ -21,7 +21,7 @@ PROTO_SRC_DIR="${QBRIX_PROTO_SRC:-$ROOT_DIR/../qbrix/proto}"
 OUT_DIR="$ROOT_DIR/qbrix/_transport/_grpc/_proto"
 OUT_NAMESPACE="qbrix._transport._grpc._proto"
 
-PROTO_FILES_TO_GEN=("common.proto" "proxy.proto")
+PROTO_FILES_TO_GEN=("common.proto" "proxy.proto" "loop.proto")
 
 # Pin grpcio-tools to keep protobuf 5.x-compatible stubs. grpcio-tools >=1.71.0
 # emits protobuf 7.x stubs which conflict with the grpc python ecosystem's

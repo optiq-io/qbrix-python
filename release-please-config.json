@@ -4,8 +4,12 @@
       "release-type": "python",
       "extra-files": ["qbrix/_version.py"],
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true
+      "bump-patch-for-minor-pre-major": true,
+      "versioning": "prerelease",
+      "prerelease": true,
+      "prerelease-type": "a"
     }
   },
+  "bootstrap-sha": "8b507f83a90a98b7a102c58cf0f89b74323fa00f",
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
 }

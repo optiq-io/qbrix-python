@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - next
 
 permissions:
   contents: write
@@ -23,6 +24,22 @@ jobs:
         id: release
         with:
           token: ${{ steps.app-token.outputs.token }}
+          target-branch: ${{ github.ref_name }}
+
+      - uses: actions/checkout@v4
+        if: github.ref_name == 'next' && steps.release.outputs.release_created
+
+      - name: Name the server this pre-release was built against
+        if: github.ref_name == 'next' && steps.release.outputs.release_created
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          target=$(sed -n '/<!-- next-target -->/,/<!-- \/next-target -->/p' README.md | sed '1d;$d')
+          test -n "$target"
+          gh release view "$TAG" --json body --jq .body > notes.md
+          printf '%s\n\n' "Pre-release for qbrix next. $target" | cat - notes.md > body.md
+          gh release edit "$TAG" --notes-file body.md
 
       - uses: actions/checkout@v4
         if: steps.release.outputs.pr
