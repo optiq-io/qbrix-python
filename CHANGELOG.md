@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.1](https://github.com/optiq-io/qbrix-python/compare/v0.3.0...v0.3.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* cap httpx below 1.0 ([#44](https://github.com/optiq-io/qbrix-python/issues/44)) ([db6431a](https://github.com/optiq-io/qbrix-python/commit/db6431a3c6af0d1ea00b29a246ff1cd6d71b6424))
+
+
+### Documentation
+
+* describe qbrix as the open-source decision engine (OPT-449) ([#40](https://github.com/optiq-io/qbrix-python/issues/40)) ([55caf5e](https://github.com/optiq-io/qbrix-python/commit/55caf5ef5490ce3c188a5b43f70bc72d0dbdb4b2))
+* managed hosting uses the URL of your deployment ([66b1894](https://github.com/optiq-io/qbrix-python/commit/66b18941631737f860c657baf621785991ef066c))
+* managed hosting uses the URL of your deployment ([2adc085](https://github.com/optiq-io/qbrix-python/commit/2adc08553fef35847d88d079dbc1a0bc3d5a77f6))
+
 ## [0.3.0](https://github.com/optiq-io/qbrix-python/compare/v0.2.11...v0.3.0) (2026-09-27)
 
 
