@@ -1,10 +1,9 @@
-from qbrix.model.agent import FeedbackRequest
-from qbrix.model.agent import FeedbackResponse
-from qbrix.model.agent import SelectedArm
-from qbrix.model.agent import SelectRequest
-from qbrix.model.agent import SelectResponse
 from qbrix.model.common import Context
 from qbrix.model.common import PaginatedResponse
+from qbrix.model.decision import Decision
+from qbrix.model.decision import Option
+from qbrix.model.decision import Outcome
+from qbrix.model.decision import Settings
 from qbrix.model.experiment import Experiment
 from qbrix.model.experiment import ExperimentCreate
 from qbrix.model.experiment import ExperimentUpdate
@@ -25,23 +24,22 @@ __all__ = [
     "Arm",
     "ArmCreate",
     "Context",
+    "Decision",
     "Experiment",
     "ExperimentCreate",
     "ExperimentUpdate",
-    "FeedbackRequest",
-    "FeedbackResponse",
     "GateConfig",
     "GateCreate",
     "GateEvaluation",
     "GateRule",
     "GateRuleEvaluation",
+    "Option",
+    "Outcome",
     "PaginatedResponse",
     "Policy",
     "PolicyParam",
     "Pool",
     "PoolCreate",
     "PoolUpdate",
-    "SelectedArm",
-    "SelectRequest",
-    "SelectResponse",
+    "Settings",
 ]

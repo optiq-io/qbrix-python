@@ -1,218 +1,172 @@
-"""Live end-to-end smoke against docker-compose: HTTP and gRPC parity.
+"""Live smoke for the request path against a server with next switched on.
 
-Runs the same pool → experiment → gate → select → feedback flow against both
-transports and asserts the Pydantic objects coming out match. Hits the proxy
-on http://localhost:8080 and localhost:50050.
-
-The second leg is contextual: one experiment with a declared context_schema,
-created over gRPC and selected against by both transports. Both halves are a
-Struct round trip. The create carries the schema itself — a list of objects the
-old map<string,string> field could only str() — and the selects carry the
-properties, where a successful call is itself the proof that the types survived:
-cart_value is declared numeric, so had the Struct flattened it to a string the
-server's encoder would have rejected it.
+Creates a metric and a draft loop over raw HTTP, then runs select and outcome
+through every client the SDK has: HTTP and gRPC, sync and async. Each must
+answer the draft's fallback without a request_id, then, once the loop is
+launched, a live decision whose outcome is accepted. Finishes with the
+offline path against an address nothing listens on.
 
 Usage:
-    QBRIX_API_KEY=optiq_xxx python bin/smoke_dual_transport.py
+    QBRIX_API_KEY=optiq_xxx uv run python bin/smoke_dual_transport.py
+    # QBRIX_SMOKE_HTTP_URL (default http://localhost:8080)
+    # QBRIX_SMOKE_GRPC_URL (default grpc://localhost:50050)
 """
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 import uuid
 from typing import Any
 
-from qbrix import Context
+import httpx
+from pydantic import ValidationError
+
+from qbrix import AsyncQbrix
+from qbrix import BadRequestError
+from qbrix import Decision
+from qbrix import NotFoundError
 from qbrix import Qbrix
-from qbrix.model.experiment import Experiment
-from qbrix.model.gate import GateConfig
-from qbrix.model.pool import Pool
 
-HTTP_URL = "http://localhost:8080"
-GRPC_URL = "localhost:50050"
-
+HTTP_URL = os.environ.get("QBRIX_SMOKE_HTTP_URL", "http://localhost:8080")
+GRPC_URL = os.environ.get("QBRIX_SMOKE_GRPC_URL", "grpc://localhost:50050")
 RUN_ID = uuid.uuid4().hex[:8]
-
-CONTEXT_SCHEMA = [
-    {"type": "categorical", "name": "device", "values": ["mobile", "desktop"]},
-    {"type": "numeric", "name": "cart_value", "min": 0, "max": 500},
-    {"type": "boolean", "name": "returning"},
-]
-
-# one visitor per shape, so both branches of every property get exercised.
-VISITORS = [
-    {"device": "mobile", "cart_value": 42.5, "returning": True},
-    {"device": "desktop", "cart_value": 310, "returning": False},
-    # a value the schema never declared: encoded into the reserved `other`
-    # slot rather than rejected.
-    {"device": "tablet", "cart_value": 0, "returning": True},
-]
+CONFIG = {"headline": "Pay now", "size": 3, "ratio": 0.5}
+OFFLINE = {"key": "offline", "config": {"headline": "Checkout"}}
+TARGETS = [("http", HTTP_URL), ("grpc", GRPC_URL)]
 
 
 def _api_key() -> str:
     key = os.environ.get("QBRIX_API_KEY")
     if not key:
-        sys.exit("set QBRIX_API_KEY (try `set -a; source .env`)")
+        sys.exit("set QBRIX_API_KEY")
     return key
 
 
-def _create_pool(client: Qbrix, suffix: str) -> Pool:
-    return client.pool.create(
-        name=f"smoke-{suffix}-{RUN_ID}",
-        arms=[
-            {"name": "control"},
-            {"name": "variant-a"},
-            {"name": "variant-b"},
-        ],
+def _setup(api: httpx.Client) -> str:
+    metric = f"smoke-purchase-{RUN_ID}"
+    api.post(
+        "/api/v1/metrics",
+        json={"name": metric, "semantic": "a purchase", "type": "conversion"},
+    ).raise_for_status()
+    loop = api.post(
+        "/api/v1/loops",
+        json={
+            "name": f"smoke headline {RUN_ID}",
+            "metric": metric,
+            "options": [
+                {"key": "control", "name": "Control", "config": {"headline": "Buy"}},
+                {"key": "bold", "name": "Bold", "config": CONFIG},
+            ],
+            "fallback": "control",
+        },
     )
+    loop.raise_for_status()
+    return loop.json()["key"]
 
 
-def _create_experiment(client: Qbrix, pool_id: str, suffix: str) -> Experiment:
-    return client.experiment.create(
-        name=f"smoke-exp-{suffix}-{RUN_ID}",
-        pool_id=pool_id,
-        policy="BetaTSPolicy",
-        enabled=True,
-    )
+def _launch(api: httpx.Client, key: str) -> None:
+    api.post(f"/api/v1/loops/{key}/launch", json={}).raise_for_status()
 
 
-def _create_contextual(client: Qbrix) -> tuple[Pool, Experiment]:
-    """a pool + experiment with a declared context schema.
-
-    The create is the regression guard for OPT-399: policy_params travels as a
-    Struct, so the schema arrives as a list of objects rather than a repr of
-    one. LinUCBPolicy rather than "auto" because the gRPC servicer has no
-    meta-experiment branch — see the follow-up filed alongside OPT-399.
-    """
-    pool = client.pool.create(
-        name=f"smoke-ctx-{RUN_ID}",
-        arms=[{"name": "express"}, {"name": "standard"}],
-    )
-    exp = client.experiment.create(
-        name=f"smoke-ctx-exp-{RUN_ID}",
-        pool_id=pool.id,
-        policy="LinUCBPolicy",
-        policy_params={"alpha": 1.5, "context_schema": CONTEXT_SCHEMA},
-        enabled=True,
-    )
-    # dim is derived from the schema, never sent — assert the server did that.
-    dim = exp.policy_params.get("dim")
-    expected_dim = 1 + (len(CONTEXT_SCHEMA[0]["values"]) + 1) + 1 + 1
-    assert dim == expected_dim, f"dim={dim}, expected {expected_dim}"
-    print(f"\ncontextual experiment {exp.id} (dim={dim} derived from the schema)")
-    return pool, exp
+def _check_draft(label: str, d: Decision) -> None:
+    assert d.reason == "draft", (label, d)
+    assert d.request_id is None, (label, d)
+    assert d.option is not None and d.option.key == "control", (label, d)
+    print(f"  ok  {label}: draft → {d.option.key}, no request_id")
 
 
-def _contextual_leg(client: Qbrix, experiment_id: str) -> dict[str, Any]:
-    """select with context.properties on whichever transport this client uses.
-
-    On gRPC the properties travel as a protobuf Struct. cart_value is declared
-    numeric, so a Struct that flattened it to a string would be rejected by the
-    server's encoder — a clean pass here is the type-preservation proof.
-    """
-    arm_counts: dict[str, int] = {}
-    request_id_present = True
-    for i, properties in enumerate(VISITORS):
-        result = client.agent.select(
-            experiment_id,
-            Context(id=f"visitor-{i}", properties=properties),
-        )
-        arm_counts[result.arm.name] = arm_counts.get(result.arm.name, 0) + 1
-        request_id_present &= isinstance(result.request_id, str)
-        client.agent.feedback(result.request_id, reward=1.0 if i == 0 else 0.0)
-    print(f"  ctx select: {arm_counts}")
-
-    # which arms come back is a bandit outcome, not a transport property — the
-    # counts are printed but deliberately not compared across transports.
-    return {
-        "ctx_selections": sum(arm_counts.values()),
-        "ctx_request_ids": request_id_present,
-    }
+def _check_live(label: str, d: Decision) -> None:
+    assert d.reason == "live", (label, d)
+    assert d.request_id, (label, d)
+    assert d.option is not None, (label, d)
+    if d.option.key == "bold":
+        assert d.option.config == CONFIG, (label, d.option.config)
+        assert isinstance(d.option.config["size"], int), (label, d.option.config)
+    print(f"  ok  {label}: live → {d.option.key} {d.option.config}")
 
 
-def _round_trip(client: Qbrix, label: str) -> dict[str, Any]:
-    print(f"\n=== {label} ===")
-    pool = _create_pool(client, label.lower())
-    print(f"  pool:       id={pool.id} name={pool.name} arms={len(pool.arms)}")
-    exp = _create_experiment(client, pool.id, label.lower())
-    print(f"  experiment: id={exp.id} policy={exp.policy} enabled={exp.enabled}")
-
-    # Optional gate
-    gate = client.gate.create(
-        exp.id,
-        enabled=True,
-        rollout_percentage=100.0,
-    )
-    assert isinstance(gate, GateConfig)
-    print(f"  gate:       enabled={gate.enabled} rollout={gate.rollout_percentage}")
-
-    # Select + feedback loop
-    arm_counts: dict[str, int] = {}
-    for i in range(5):
-        result = client.agent.select(exp.id, {"id": f"user-{i}"})
-        arm_counts[result.arm.name] = arm_counts.get(result.arm.name, 0) + 1
-        client.agent.feedback(result.request_id, reward=1.0 if i % 2 == 0 else 0.0)
-    print(f"  select:     {arm_counts}")
-
-    # Cleanup
-    client.experiment.delete(exp.id)
-    client.pool.delete(pool.id)
-
-    return {
-        "pool_type": type(pool).__name__,
-        "pool_arms": len(pool.arms),
-        "experiment_type": type(exp).__name__,
-        "gate_type": type(gate).__name__,
-        "arm_counts": arm_counts,
-    }
-
-
-def main() -> int:
-    api_key = _api_key()
-
-    with Qbrix(transport="http", api_key=api_key, base_url=HTTP_URL) as http_client:
-        http_result = _round_trip(http_client, "HTTP")
-
-        with Qbrix(transport="grpc", api_key=api_key, base_url=GRPC_URL) as grpc_client:
-            grpc_result = _round_trip(grpc_client, "gRPC")
-
-            # one contextual experiment, selected against by both transports —
-            # same schema, same arms, so the results are genuinely comparable.
-            # created last so it never overlaps the round trips: the free tier
-            # caps active experiments at 3.
-            ctx_pool, ctx_exp = _create_contextual(grpc_client)
+def _sync(key: str, api_key: str, stage: str) -> None:
+    for transport, url in TARGETS:
+        label = f"sync {transport}"
+        with Qbrix(api_key=api_key, base_url=url, transport=transport) as client:
+            d = client.select(key, context={"unit": f"u-{label}"})
+            if stage == "draft":
+                _check_draft(label, d)
+                assert client.outcome(d.request_id, 1) is None
+                continue
+            _check_live(label, d)
+            accepted = client.outcome(d.request_id, 1)
+            assert accepted is not None and accepted.id, (label, accepted)
+            print(f"  ok  {label}: outcome accepted as {accepted.id}")
             try:
-                print("\n=== HTTP · context.properties ===")
-                http_result.update(_contextual_leg(http_client, ctx_exp.id))
-                print("\n=== gRPC · context.properties ===")
-                grpc_result.update(_contextual_leg(grpc_client, ctx_exp.id))
-            finally:
-                grpc_client.experiment.delete(ctx_exp.id)
-                grpc_client.pool.delete(ctx_pool.id)
+                client.outcome(d.request_id, 2)
+                raise AssertionError(f"{label}: a conversion of 2 was accepted")
+            except BadRequestError as e:
+                print(f"  ok  {label}: outcome 2 refused: {e.detail}")
+            try:
+                client.select(f"no-such-loop-{RUN_ID}", context={"unit": "u"})
+                raise AssertionError(f"{label}: unknown loop answered")
+            except NotFoundError as e:
+                print(f"  ok  {label}: unknown loop: {e.detail}")
 
-    print("\n=== Parity check ===")
-    for key in (
-        "pool_type",
-        "experiment_type",
-        "gate_type",
-        "pool_arms",
-        "ctx_selections",
-        "ctx_request_ids",
-    ):
-        same = http_result[key] == grpc_result[key]
-        print(
-            f"  {key}: HTTP={http_result[key]} gRPC={grpc_result[key]} {'OK' if same else 'MISMATCH'}"
-        )
-        if not same:
-            return 1
 
-    print(
-        "\nALL GOOD. Both transports produced identical Pydantic shapes, "
-        "and both encoded context.properties server-side."
-    )
-    return 0
+async def _async(key: str, api_key: str, stage: str) -> None:
+    for transport, url in TARGETS:
+        label = f"async {transport}"
+        async with AsyncQbrix(
+            api_key=api_key, base_url=url, transport=transport
+        ) as client:
+            d = await client.select(
+                key, context={"unit": f"u-{label}", "properties": {"device": "web"}}
+            )
+            if stage == "draft":
+                _check_draft(label, d)
+                continue
+            _check_live(label, d)
+            accepted = await client.outcome(d.request_id, 0)
+            assert accepted is not None and accepted.id, (label, accepted)
+            print(f"  ok  {label}: outcome accepted as {accepted.id}")
+
+
+def _offline() -> None:
+    for transport, url in [
+        ("http", "http://127.0.0.1:9"),
+        ("grpc", "grpc://127.0.0.1:9"),
+    ]:
+        with Qbrix(api_key="optiq_unused", base_url=url, transport=transport) as client:
+            settings: dict[str, Any] = {"offline": OFFLINE, "timeout": 0.5}
+            d = client.select("anything", context={"unit": "u"}, settings=settings)
+            assert d.reason == "offline" and d.request_id is None, d
+            assert d.option is not None and d.option.key == "offline", d
+            bare = client.select(
+                "anything", context={"unit": "u"}, settings={"timeout": 0.5}
+            )
+            assert bare.option is None and bare.reason == "offline", bare
+            try:
+                client.select("anything", context={})
+                raise AssertionError("a missing unit reached the network")
+            except ValidationError:
+                pass
+        print(f"  ok  {transport}: unreachable → offline option, or none")
+
+
+def main() -> None:
+    api_key = _api_key()
+    with httpx.Client(base_url=HTTP_URL, headers={"X-API-Key": api_key}) as api:
+        key = _setup(api)
+        print(f"loop {key} (draft)")
+        _sync(key, api_key, "draft")
+        asyncio.run(_async(key, api_key, "draft"))
+        _launch(api, key)
+        print(f"loop {key} (live)")
+        _sync(key, api_key, "live")
+        asyncio.run(_async(key, api_key, "live"))
+    print("offline")
+    _offline()
+    print("all good")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

@@ -11,8 +11,6 @@ import pytest
 
 from qbrix.exception import QbrixAPIError
 from qbrix.exception import QbrixConnectionError
-from qbrix.model.agent import SelectedArm
-from qbrix.model.agent import SelectResponse
 from qbrix.model.common import PaginatedResponse
 from qbrix.model.experiment import Experiment
 from qbrix.model.gate import GateConfig
@@ -24,7 +22,6 @@ from qbrixmcp._models import ConfigureGateInput
 from qbrixmcp._models import CreateExperimentFromPoolInput
 from qbrixmcp._models import CreatePoolInput
 from qbrixmcp._models import ExperimentIdInput
-from qbrixmcp._models import FeedbackInput
 from qbrixmcp._models import GetExperimentInput
 from qbrixmcp._models import GetGateInput
 from qbrixmcp._models import GetPoolInput
@@ -33,11 +30,8 @@ from qbrixmcp._models import ListExperimentsInput
 from qbrixmcp._models import ListPoliciesInput
 from qbrixmcp._models import ListPoolsInput
 from qbrixmcp._models import ResponseFormat
-from qbrixmcp._models import SelectInput
 from qbrixmcp._models import SetupExperimentInput
 from qbrixmcp._models import TuneExperimentInput
-from qbrixmcp._tools.agent import qbrix_feedback
-from qbrixmcp._tools.agent import qbrix_select
 from qbrixmcp._tools.experiment import qbrix_create_experiment_from_pool
 from qbrixmcp._tools.experiment import qbrix_delete_experiment
 from qbrixmcp._tools.experiment import qbrix_get_experiment
@@ -75,8 +69,6 @@ def _make_client() -> MagicMock:
     client.gate.get = AsyncMock()
     client.gate.update = AsyncMock()
     client.gate.delete = AsyncMock()
-    client.agent.select = AsyncMock()
-    client.agent.feedback = AsyncMock()
     client.get = AsyncMock()
     return client
 
@@ -713,111 +705,6 @@ class TestLifecycleTools:
         client.experiment.update.side_effect = _api_error(404)
         result = await qbrix_pause_experiment(
             ExperimentIdInput(experiment_id="bad"), _make_ctx(client)
-        )
-        assert "error:" in result
-
-
-# ---------------------------------------------------------------------------
-# hot path — select / feedback
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-class TestSelectFeedback:
-    async def test_select_returns_arm_json(self) -> None:
-        client = _make_client()
-        client.agent.select.return_value = SelectResponse(
-            arm=SelectedArm(id="arm-1", name="variant", index=1),
-            request_id="req-abc",
-            is_default=False,
-        )
-        result = await qbrix_select(
-            SelectInput(experiment_id="exp-1", context_id="user-99"),
-            _make_ctx(client),
-        )
-        parsed = json.loads(result)
-        assert parsed["arm_name"] == "variant"
-        assert parsed["request_id"] == "req-abc"
-        assert parsed["is_default"] is False
-
-    async def test_select_passes_context(self) -> None:
-        client = _make_client()
-        client.agent.select.return_value = SelectResponse(
-            arm=SelectedArm(id="arm-0", name="control", index=0),
-            request_id="req-xyz",
-            is_default=False,
-        )
-        await qbrix_select(
-            SelectInput(
-                experiment_id="exp-1",
-                context_id="user-1",
-                context_vector=[0.1, 0.2],
-                context_metadata={"plan": "premium"},
-            ),
-            _make_ctx(client),
-        )
-        _, kwargs = client.agent.select.call_args
-        assert kwargs["context"]["id"] == "user-1"
-        assert kwargs["context"]["vector"] == [0.1, 0.2]
-        assert kwargs["context"]["metadata"] == {"plan": "premium"}
-
-    async def test_select_passes_properties(self) -> None:
-        client = _make_client()
-        client.agent.select.return_value = SelectResponse(
-            arm=SelectedArm(id="arm-0", name="control", index=0),
-            request_id="req-xyz",
-            is_default=False,
-        )
-        await qbrix_select(
-            SelectInput(
-                experiment_id="exp-1",
-                context_id="user-2",
-                context_properties={"device": "mobile", "cart_value": 62.5},
-            ),
-            _make_ctx(client),
-        )
-        _, kwargs = client.agent.select.call_args
-        assert kwargs["context"]["properties"] == {
-            "device": "mobile",
-            "cart_value": 62.5,
-        }
-        assert "vector" not in kwargs["context"]
-
-    async def test_select_omits_vector_if_none(self) -> None:
-        client = _make_client()
-        client.agent.select.return_value = SelectResponse(
-            arm=SelectedArm(id="arm-0", name="control", index=0),
-            request_id="req-xyz",
-            is_default=False,
-        )
-        await qbrix_select(
-            SelectInput(experiment_id="exp-1", context_id="user-1"),
-            _make_ctx(client),
-        )
-        _, kwargs = client.agent.select.call_args
-        assert "vector" not in kwargs["context"]
-        assert "properties" not in kwargs["context"]
-        assert "metadata" not in kwargs["context"]
-
-    async def test_feedback_calls_sdk(self) -> None:
-        client = _make_client()
-        client.agent.feedback.return_value = None
-
-        result = await qbrix_feedback(
-            FeedbackInput(request_id="req-abc", reward=1.0),
-            _make_ctx(client),
-        )
-        client.agent.feedback.assert_called_once_with(request_id="req-abc", reward=1.0)
-        parsed = json.loads(result)
-        assert parsed["accepted"] is True
-
-    async def test_select_error(self) -> None:
-        client = _make_client()
-        client.agent.select.side_effect = QbrixConnectionError("down")
-        result = await qbrix_select(
-            SelectInput(experiment_id="exp-1", context_id="u-1"),
-            _make_ctx(client),
         )
         assert "error:" in result
 

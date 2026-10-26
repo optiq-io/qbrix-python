@@ -5,13 +5,11 @@ from qbrix._client import Qbrix
 from qbrix._config import QbrixConfig
 from qbrix._mod_client import _load_client
 from qbrix._mod_client import _reset_client
-from qbrix._proxies import AgentProxy
 from qbrix._proxies import ExperimentProxy
 from qbrix._proxies import GateProxy
 from qbrix._proxies import PolicyProxy
 from qbrix._proxies import PoolProxy
 from qbrix._version import __version__
-from qbrix.resource.agent import AgentResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import GateResource
 from qbrix.resource.policy import PolicyResource
@@ -35,6 +33,7 @@ from qbrix.exception import UnprocessableEntityError
 from qbrix.model import Arm
 from qbrix.model import ArmCreate
 from qbrix.model import Context
+from qbrix.model import Decision
 from qbrix.model import Experiment
 from qbrix.model import ExperimentCreate
 from qbrix.model import ExperimentUpdate
@@ -43,14 +42,15 @@ from qbrix.model import GateCreate
 from qbrix.model import GateEvaluation
 from qbrix.model import GateRule
 from qbrix.model import GateRuleEvaluation
+from qbrix.model import Option
+from qbrix.model import Outcome
 from qbrix.model import PaginatedResponse
 from qbrix.model import Policy
 from qbrix.model import PolicyParam
 from qbrix.model import Pool
 from qbrix.model import PoolCreate
 from qbrix.model import PoolUpdate
-from qbrix.model import SelectedArm
-from qbrix.model import SelectResponse
+from qbrix.model import Settings
 from qbrix.model.policy import PolicyName
 from qbrix.model.runtime import ServiceHealth
 from qbrix.model.runtime import StreamSize
@@ -60,7 +60,6 @@ from qbrix.model.runtime import StreamSize
 pool: PoolResource = PoolProxy().__as_proxied__()  # type: ignore[assignment]
 experiment: ExperimentResource = ExperimentProxy().__as_proxied__()  # type: ignore[assignment]
 gate: GateResource = GateProxy().__as_proxied__()  # type: ignore[assignment]
-agent: AgentResource = AgentProxy().__as_proxied__()  # type: ignore[assignment]
 policy: PolicyResource = PolicyProxy().__as_proxied__()  # type: ignore[assignment]
 
 __all__ = [
@@ -74,7 +73,6 @@ __all__ = [
     "pool",
     "experiment",
     "gate",
-    "agent",
     "policy",
     "_load_client",
     "_reset_client",
@@ -95,7 +93,6 @@ __all__ = [
     "ServiceUnavailableError",
     "UnprocessableEntityError",
     # resources
-    "AgentResource",
     "ExperimentResource",
     "GateResource",
     "PolicyResource",
@@ -105,6 +102,7 @@ __all__ = [
     "Arm",
     "ArmCreate",
     "Context",
+    "Decision",
     "Experiment",
     "ExperimentCreate",
     "ExperimentUpdate",
@@ -113,6 +111,8 @@ __all__ = [
     "GateEvaluation",
     "GateRule",
     "GateRuleEvaluation",
+    "Option",
+    "Outcome",
     "PaginatedResponse",
     "Policy",
     "PolicyName",
@@ -120,8 +120,7 @@ __all__ = [
     "Pool",
     "PoolCreate",
     "PoolUpdate",
-    "SelectedArm",
-    "SelectResponse",
+    "Settings",
     "ServiceHealth",
     "StreamSize",
 ]

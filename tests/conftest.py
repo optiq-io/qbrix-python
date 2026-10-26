@@ -145,6 +145,7 @@ def _build_mock_grpc_client():  # type: ignore[no-untyped-def]
     # No spec — ProxyServiceStub attaches RPC methods in __init__, so a class
     # spec wouldn't see them. The bare MagicMock auto-generates any attribute.
     client._stub = MagicMock()
+    client._loop_stub = MagicMock()
     return client
 
 
@@ -160,6 +161,7 @@ def _build_mock_async_grpc_client():  # type: ignore[no-untyped-def]
     # No spec — ProxyServiceStub attaches RPC methods in __init__, so a class
     # spec wouldn't see them. The bare MagicMock auto-generates any attribute.
     client._stub = MagicMock()
+    client._loop_stub = MagicMock()
     return client
 
 

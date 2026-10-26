@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Python SDK for the Qbrix distributed computing platform — a multi-armed bandit system for site variant optimisation. The SDK wraps the Qbrix proxy service HTTP API (`proxysvc`), providing typed sync and async clients for pool/experiment/gate management and the agent select/feedback loop.
+Python SDK for the Qbrix distributed computing platform — a multi-armed bandit system for site variant optimisation. The SDK wraps the Qbrix proxy service HTTP API (`proxysvc`), providing typed sync and async clients for the request path (`select` / `outcome` on loops) and, until today's API retires, pool/experiment/gate management. This is the `next` branch: it publishes `0.4.0aN` pre-releases for a server with next switched on (`PROXY_NEXT_ENABLED=true`); `main` keeps the stable releases.
 
 The upstream proxy service lives at `../qbrix/svc/proxy` — consult it for API endpoint behavior, request/response shapes, and feature gate evaluation logic. HTTP routes are under `src/proxysvc/transport/http/router/`, gRPC under `src/proxysvc/transport/grpc/`, and per-domain schemas under `src/proxysvc/mod/<domain>/`.
 
@@ -63,7 +63,7 @@ Transport is chosen by `Qbrix(transport="http"|"grpc")`, falling back to the `QB
 Both transports satisfy the `Transport`/`AsyncTransport` protocol (`_transport/_base.py`) — an HTTP-shaped verb interface. Resources call `self._client.post("/api/v1/pools", ...)` and never know which wire format is active.
 
 - **HTTP** (`_transport/_http/_client.py`): httpx-based; retry loop, `_make_status_error`, header construction.
-- **gRPC** (`_transport/_grpc/`): `_routes.py` maps `(method, path)` → one of 18 `ProxyService` RPCs; `_handlers.py` builds proto requests + converts responses; `_convert.py` holds explicit proto↔dict converters; `_error.py` maps `grpc.StatusCode` → the same `QbrixAPIError` subclasses. Paths with no proto RPC raise `NotImplementedError` — see `_HTTP_ONLY` in `_routes.py` for the HTTP-only set (`/api/v1/runtime/*`, `gate.evaluate()`, `experiment.reset()`).
+- **gRPC** (`_transport/_grpc/`): `_routes.py` maps `(method, path)` → a `ProxyService` or `LoopService` RPC (each `Handler` names its `service`); `_handlers.py` builds proto requests + converts responses; `_convert.py` holds explicit proto↔dict converters; `_error.py` maps `grpc.StatusCode` → the same `QbrixAPIError` subclasses. Paths with no proto RPC raise `NotImplementedError` — see `_HTTP_ONLY` in `_routes.py` for the HTTP-only set (`/api/v1/runtime/*`, `gate.evaluate()`, `experiment.reset()`).
 
 **Known HTTP/gRPC parity gaps** (need an upstream `proxy.proto` change to close — the SDK cannot fix these on its own):
 
@@ -75,13 +75,13 @@ Both transports satisfy the `Transport`/`AsyncTransport` protocol (`_transport/_
 | `Experiment.meta_experiment_id` | real value | always `None` — not in `common.proto` |
 
 `GateConfig.version` is the sharp edge: it is silently *wrong* over gRPC rather than merely absent, so don't build optimistic-concurrency logic on it without `transport="http"`.
-- **Vendored protos** (`_transport/_grpc/_proto/`): generated `*_pb2.py`/`.pyi` from `../qbrix/proto/{common,proxy}.proto`. Regenerate with `make proto` (or `bash bin/regen_protos.sh`); committed to git, never hand-edited.
+- **Vendored protos** (`_transport/_grpc/_proto/`): generated `*_pb2.py`/`.pyi` from `../qbrix/proto/{common,proxy,loop}.proto`. Regenerate with `make proto` (or `bash bin/regen_protos.sh`); committed to git, never hand-edited.
 
 ### Resource Layer (`resource/`)
 
 Each resource file defines both sync and async variants (`PoolResource`/`AsyncPoolResource`, etc.). Resources hold a reference to the client and delegate calls through `_get`, `_post`, `_put`, `_patch`, `_delete` helpers from `SyncAPIResource`/`AsyncAPIResource`. The resource layer is transport-agnostic — it predates gRPC and was not modified when gRPC was added.
 
-**`cast_to` pattern:** Resource methods pass `cast_to=ModelClass` to the client's `request()` method, which calls `ModelClass.model_validate(data)` on the JSON response. Methods that don't need a response model (like `delete`, `feedback`) omit `cast_to`.
+**`cast_to` pattern:** Resource methods pass `cast_to=ModelClass` to the client's `request()` method, which calls `ModelClass.model_validate(data)` on the JSON response. Methods that don't need a response model (like `delete`) omit `cast_to`.
 
 **Dual input types:** All resource methods accept both Pydantic models and raw dicts (e.g., `arms: list[dict | ArmCreate]`, `context: Context | dict`). Serialization uses `isinstance` checks.
 
@@ -104,7 +104,7 @@ The SDK targets these proxy endpoints (all under `/api/v1`):
 - **Pools:** `POST/GET/PATCH/DELETE /pools[/{id}]`, `GET /pools/{id}/experiments`
 - **Experiments:** `POST/GET/PATCH/DELETE /experiments[/{id}]` — supports `?search=&enabled=` filters
 - **Gates:** `POST/GET/PUT/PATCH/DELETE /gates/{experiment_id}`, `POST /gates/{experiment_id}/evaluate` — `gate.update()` sends `PATCH` (partial, matching `pool.update`/`experiment.update`); the proxy's `PUT` full-replace is deliberately unreachable from the SDK since OPT-355. `evaluate` is a read-only dry run and is HTTP-only.
-- **Agent:** `POST /agent/select`, `POST /agent/feedback`
+- **Request path:** `POST /select`, `POST /outcome` (next switch on)
 - **Policies:** `GET /policies` — supports `?reward_type=` filter (read-only policy discovery)
 
 ### Supported Policies
@@ -121,18 +121,12 @@ Experiment `policy` field values (must match exactly), mirroring the proxy's `qb
 
 `policy.list()` is the runtime source of truth if `PolicyName` drifts from the registry.
 
-Contextual policies (`LinUCBPolicy`, `LinTSPolicy`) need features per selection. Declare a
-`context_schema` in `policy_params` at creation and send `context.properties` — the proxy encodes
-them and derives `dim` from the schema. `context.vector` is the escape hatch for an experiment
-created without a schema; the two are mutually exclusive and `Context` rejects both together
-locally.
+### Request Path (select / outcome)
 
-### Agent Select/Feedback Loop
-
-1. `POST /agent/select` → gate evaluation (if configured) → bandit selection → returns `{arm, request_id, is_default}`
-2. `request_id` is an HMAC-signed opaque token — store it, pass it unchanged to feedback
-3. `POST /agent/feedback` with `{request_id, reward}` → publishes to learning stream
-4. `is_default: true` means the gate committed an arm (bypassed bandit)
+1. `client.select(loop, context, settings)` → `POST /select` `{loop, context: {unit, properties}}` → `Decision{option{key, name, config}, request_id | None, reason}`. Over gRPC it is `qbrix.loop.LoopService/Select`; an empty `request_id` becomes `None` and `unstruct` restores whole floats in `config` to ints, so both transports return the same `Decision`.
+2. `context.unit` is validated locally (non-blank, ≤ 256 chars) before any call.
+3. Connection errors, timeouts, 429 and 5xx (gRPC `UNAVAILABLE`, `DEADLINE_EXCEEDED`, `RESOURCE_EXHAUSTED`, `INTERNAL`) return `settings.offline` with reason `offline` and no `request_id` — never raise. 4xx caller errors raise.
+4. `client.outcome(request_id, value, id=, at=)` → `POST /outcome` (202 `{id, at}`) / `LoopService/Outcome`. `None` request_id sends nothing. The SDK mints `id` once per call, so transport retries reuse it; `at` goes as ISO 8601 (HTTP) or a `Timestamp` (gRPC).
 
 ### Feature Gate Evaluation Order
 
@@ -147,7 +141,7 @@ make proto                # or: bash bin/regen_protos.sh
 # Verify vendored stubs are current (CI check)
 make proto-check
 
-# Live HTTP+gRPC parity smoke against a running docker-compose proxy
+# Live select/outcome smoke on HTTP+gRPC, sync+async, against a proxy with next on (make dev-next)
 QBRIX_API_KEY=optiq_xxx uv run python bin/smoke_dual_transport.py
 ```
 

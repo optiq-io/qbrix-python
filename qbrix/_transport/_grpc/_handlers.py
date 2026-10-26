@@ -1,9 +1,10 @@
 """Per-RPC request builders and response converters for the gRPC transport.
 
-Each handler is a triple ``(build_request, stub_attr, convert_response)``:
+Each handler is ``(build_request, stub_attr, convert_response, service)``:
   - build_request(body, params, path_params) → proto request message
-  - stub_attr: attribute name on ``proxy_pb2_grpc.ProxyServiceStub``
+  - stub_attr: attribute name on the service's stub
   - convert_response(proto_resp, path_params) → dict (Pydantic-shaped)
+  - service: ``"proxy"`` (``ProxyServiceStub``) or ``"loop"`` (``LoopServiceStub``)
 
 Splitting this from the transport class itself keeps the sync/async dispatchers
 identical except for the actual ``stub.<Method>(...)`` call (sync vs await).
@@ -16,15 +17,17 @@ from typing import Callable
 from typing import NamedTuple
 
 from qbrix._transport._grpc._convert import arms_from_dicts
-from qbrix._transport._grpc._convert import context_from_dict
 from qbrix._transport._grpc._convert import experiment_detail_to_dict
 from qbrix._transport._grpc._convert import experiment_to_dict
 from qbrix._transport._grpc._convert import gate_config_from_dict
 from qbrix._transport._grpc._convert import gate_config_to_dict
+from qbrix._transport._grpc._convert import loop_outcome_request
+from qbrix._transport._grpc._convert import loop_outcome_to_dict
+from qbrix._transport._grpc._convert import loop_select_request
+from qbrix._transport._grpc._convert import loop_select_to_dict
 from qbrix._transport._grpc._convert import policy_params_to_struct
 from qbrix._transport._grpc._convert import policy_to_dict
 from qbrix._transport._grpc._convert import pool_to_dict
-from qbrix._transport._grpc._convert import select_response_to_dict
 from qbrix._transport._grpc._proto import proxy_pb2
 
 
@@ -32,6 +35,7 @@ class Handler(NamedTuple):
     build_request: Callable[[dict[str, Any], dict[str, Any], dict[str, str]], Any]
     stub_attr: str
     convert_response: Callable[[Any, dict[str, str]], dict[str, Any] | None]
+    service: str = "proxy"
 
 
 def _experiment_response_to_dict(resp: Any) -> dict[str, Any]:
@@ -251,22 +255,18 @@ HANDLERS: dict[str, Handler] = {
         stub_attr="DeleteGateConfig",
         convert_response=lambda resp, pp: None,
     ),
-    # ----- agent -----
-    "select": Handler(
-        build_request=lambda body, params, pp: proxy_pb2.SelectRequest(
-            experiment_id=body["experiment_id"],
-            context=context_from_dict(body.get("context") or {}),
-        ),
+    # ----- loops -----
+    "loop_select": Handler(
+        build_request=lambda body, params, pp: loop_select_request(body),
         stub_attr="Select",
-        convert_response=lambda resp, pp: select_response_to_dict(resp),
+        convert_response=lambda resp, pp: loop_select_to_dict(resp),
+        service="loop",
     ),
-    "feedback": Handler(
-        build_request=lambda body, params, pp: proxy_pb2.FeedbackRequest(
-            request_id=body["request_id"],
-            reward=float(body["reward"]),
-        ),
-        stub_attr="Feedback",
-        convert_response=lambda resp, pp: None,
+    "loop_outcome": Handler(
+        build_request=lambda body, params, pp: loop_outcome_request(body),
+        stub_attr="Outcome",
+        convert_response=lambda resp, pp: loop_outcome_to_dict(resp),
+        service="loop",
     ),
     # ----- policies -----
     "list_policies": Handler(

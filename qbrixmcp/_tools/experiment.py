@@ -38,7 +38,6 @@ async def qbrix_setup_experiment(params: SetupExperimentInput, ctx: Context) -> 
     Workflow:
         1. Use qbrix_list_policies to choose a policy
         2. Call this tool with arm names, metadata payloads, and policy
-        3. Use the returned experiment_id in qbrix_select calls
 
     Args:
         params.name: experiment name
@@ -88,13 +87,6 @@ async def qbrix_setup_experiment(params: SetupExperimentInput, ctx: Context) -> 
         if gate:
             lines += ["", f"## Gate: {gate.rollout_percentage}% traffic rollout active"]
         lines += [
-            "",
-            "## Integration",
-            "```python",
-            f'response = client.agent.select("{experiment.id}", context={{"id": user_id}})',
-            "arm = response.arm  # arm.name or arm.metadata to render the variant",
-            "client.agent.feedback(response.request_id, reward=1.0)",
-            "```",
             "",
             "**Arm IDs (for gate rules):**",
         ]

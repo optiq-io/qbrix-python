@@ -2,8 +2,7 @@
 
 Provides tools for the full experimentation lifecycle: discovering and comparing
 bandit policies, designing and launching experiments, configuring traffic gates,
-monitoring performance, and taking lifecycle actions. Also exposes the agent
-select/feedback hot path for customers embedding qbrix in their own product code.
+monitoring performance, and taking lifecycle actions.
 
 Connect to Claude Code, Claude Desktop, Cursor, or any MCP-compatible client.
 Configure via environment variables: QBRIX_API_KEY, QBRIX_BASE_URL.
@@ -19,7 +18,6 @@ from mcp.server.fastmcp import Context
 from mcp.server.fastmcp import FastMCP
 
 from qbrix import AsyncQbrix
-from qbrixmcp._tools import agent
 from qbrixmcp._tools import experiment
 from qbrixmcp._tools import gate
 from qbrixmcp._tools import policy
@@ -44,7 +42,6 @@ policy.register(mcp)
 pool.register(mcp)
 experiment.register(mcp)
 gate.register(mcp)
-agent.register(mcp)
 
 
 @mcp.resource("qbrix://policies")

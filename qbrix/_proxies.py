@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from qbrix._util import LazyProxy
-from qbrix.resource.agent import AgentResource
 from qbrix.resource.experiment import ExperimentResource
 from qbrix.resource.gate import GateResource
 from qbrix.resource.policy import PolicyResource
@@ -27,11 +26,6 @@ class ExperimentProxy(LazyProxy[ExperimentResource]):
 class GateProxy(LazyProxy[GateResource]):
     def __load__(self) -> GateResource:
         return _load_client().gate
-
-
-class AgentProxy(LazyProxy[AgentResource]):
-    def __load__(self) -> AgentResource:
-        return _load_client().agent
 
 
 class PolicyProxy(LazyProxy[PolicyResource]):

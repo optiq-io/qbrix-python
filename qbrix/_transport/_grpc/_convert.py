@@ -25,6 +25,7 @@ from google.protobuf import json_format
 from google.protobuf import struct_pb2
 
 from qbrix._transport._grpc._proto import common_pb2
+from qbrix._transport._grpc._proto import loop_pb2
 from qbrix._transport._grpc._proto import proxy_pb2
 
 # ----- arms / pools -----------------------------------------------------------
@@ -233,48 +234,75 @@ def gate_config_from_dict(body: dict[str, Any]) -> proxy_pb2.FeatureGateConfig:
     return cfg
 
 
-# ----- agent ------------------------------------------------------------------
+# ----- loops ------------------------------------------------------------------
 
 
-def context_from_dict(ctx: dict[str, Any]) -> common_pb2.Context:
-    metadata = ctx.get("metadata") or {}
-    context = common_pb2.Context(
-        id=ctx.get("id", ""),
-        vector=list(ctx.get("vector") or []),
-        metadata={k: str(v) for k, v in metadata.items()},
+def unstruct(value: Any) -> Any:
+    """Restore whole floats to ints: a Struct carries every number as a double."""
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, dict):
+        return {k: unstruct(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [unstruct(v) for v in value]
+    return value
+
+
+def loop_select_request(body: dict[str, Any]) -> loop_pb2.SelectRequest:
+    context = body.get("context") or {}
+    req = loop_pb2.SelectRequest(
+        loop=body["loop"], context=loop_pb2.Context(unit=context.get("unit", ""))
     )
-    # Struct, not the string map: the server encodes a numeric property against
-    # a declared range, so 20 has to stay 20 rather than arriving as "20".
-    properties = ctx.get("properties")
-    if properties:
-        context.properties.update(properties)
-    return context
+    properties = context.get("properties")
+    if properties is not None:
+        req.context.properties.update(properties)
+    return req
 
 
-def select_response_to_dict(r: proxy_pb2.SelectResponse) -> dict[str, Any]:
+def loop_select_to_dict(r: loop_pb2.SelectResponse) -> dict[str, Any]:
     return {
-        "arm": {
-            "id": r.arm.id,
-            "name": r.arm.name,
-            "index": r.arm.index,
+        "option": {
+            "key": r.option.key,
+            "name": r.option.name,
+            "config": unstruct(json_format.MessageToDict(r.option.config)),
         },
-        # proto3 has no null; a paused experiment mints no token → empty string.
-        # Normalize to None for parity with the HTTP transport.
         "request_id": r.request_id or None,
-        "is_default": r.is_default,
+        "reason": r.reason,
     }
+
+
+def loop_outcome_request(body: dict[str, Any]) -> loop_pb2.OutcomeRequest:
+    req = loop_pb2.OutcomeRequest(
+        request_id=body["request_id"],
+        value=float(body["value"]),
+        id=body.get("id") or "",
+    )
+    at = body.get("at")
+    if at is not None:
+        dt = datetime.fromisoformat(at)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        req.at.FromDatetime(dt)
+    return req
+
+
+def loop_outcome_to_dict(r: loop_pb2.OutcomeResponse) -> dict[str, Any]:
+    return {"id": r.id, "at": r.at.ToDatetime(tzinfo=timezone.utc).isoformat()}
 
 
 __all__ = [
     "arm_to_dict",
     "arms_from_dicts",
-    "context_from_dict",
     "experiment_detail_to_dict",
     "experiment_to_dict",
     "gate_config_from_dict",
     "gate_config_to_dict",
+    "loop_outcome_request",
+    "loop_outcome_to_dict",
+    "loop_select_request",
+    "loop_select_to_dict",
     "policy_params_to_struct",
     "policy_to_dict",
     "pool_to_dict",
-    "select_response_to_dict",
+    "unstruct",
 ]
