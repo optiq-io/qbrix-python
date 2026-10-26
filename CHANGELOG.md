@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0-a2](https://github.com/optiq-io/qbrix-python/compare/v0.4.0-a1...v0.4.0-a2) (2026-10-26)
+
+
+### Bug Fixes
+
+* cap httpx below 1.0 and pin the pre-release install ([#43](https://github.com/optiq-io/qbrix-python/issues/43)) ([75f4450](https://github.com/optiq-io/qbrix-python/commit/75f4450eef8b9357ab8caefde97453863d16a088))
+
 ## [0.4.0-a1](https://github.com/optiq-io/qbrix-python/compare/v0.4.0-a0...v0.4.0-a1) (2026-10-26)
 
 
