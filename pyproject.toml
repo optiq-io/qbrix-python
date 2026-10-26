@@ -25,8 +25,8 @@ dependencies = [
 
 [project.optional-dependencies]
 # Wire transports — pick one (or use `qbrix[all]` for both).
-http = ["httpx>=0.28.1"]
-http2 = ["httpx[http2]>=0.28.1"]
+http = ["httpx>=0.28.1,<1"]
+http2 = ["httpx[http2]>=0.28.1,<1"]
 grpc = ["grpcio>=1.60.0", "protobuf>=6.31.1,<7"]
 all = ["qbrix[http,grpc]"]
 
