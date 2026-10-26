@@ -29,10 +29,12 @@ Typed sync and async clients for [qbrix](https://qbrix.io): ask a loop for a dec
 ## Installation
 
 ```bash
-pip install --pre "qbrix[http]"   # HTTP/JSON transport (httpx)
-pip install --pre "qbrix[grpc]"   # gRPC transport (grpcio)
-pip install --pre "qbrix[all]"    # both
+pip install "qbrix[http]==0.4.0-a1"   # HTTP/JSON transport (httpx) x-release-please-version
+pip install "qbrix[grpc]==0.4.0-a1"   # gRPC transport (grpcio) x-release-please-version
+pip install "qbrix[all]==0.4.0-a1"    # both x-release-please-version
 ```
+
+Pin the exact version rather than passing `--pre`: `--pre` allows pre-releases of every dependency too, not only qbrix.
 
 ## Quick Start
 
