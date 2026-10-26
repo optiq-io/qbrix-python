@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0-a1](https://github.com/optiq-io/qbrix-python/compare/v0.4.0-a0...v0.4.0-a1) (2026-10-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* client.agent.select and client.agent.feedback are removed, with the qbrix_select and qbrix_feedback MCP tools and the experiment-based examples. Context is {unit, properties}.
+
+### Features
+
+* select(loop, context) and outcome(request_id, value) for qbrix next ([#41](https://github.com/optiq-io/qbrix-python/issues/41)) ([5358bf2](https://github.com/optiq-io/qbrix-python/commit/5358bf20ea9e1bcc0edcce97181c84cea35139d2))
+
+
+### Documentation
+
+* describe qbrix as the open-source decision engine (OPT-449) ([#40](https://github.com/optiq-io/qbrix-python/issues/40)) ([55caf5e](https://github.com/optiq-io/qbrix-python/commit/55caf5ef5490ce3c188a5b43f70bc72d0dbdb4b2))
+* managed hosting uses the URL of your deployment ([66b1894](https://github.com/optiq-io/qbrix-python/commit/66b18941631737f860c657baf621785991ef066c))
+* managed hosting uses the URL of your deployment ([2adc085](https://github.com/optiq-io/qbrix-python/commit/2adc08553fef35847d88d079dbc1a0bc3d5a77f6))
+
 ## [0.3.0](https://github.com/optiq-io/qbrix-python/compare/v0.2.11...v0.3.0) (2026-09-27)
 
 
