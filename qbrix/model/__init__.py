@@ -4,6 +4,9 @@ from qbrix.model.decision import Decision
 from qbrix.model.decision import Option
 from qbrix.model.decision import Outcome
 from qbrix.model.decision import Settings
+from qbrix.model.decision import TrackEvent
+from qbrix.model.decision import Tracked
+from qbrix.model.decision import TrackResult
 from qbrix.model.experiment import Experiment
 from qbrix.model.experiment import ExperimentCreate
 from qbrix.model.experiment import ExperimentUpdate
@@ -42,4 +45,7 @@ __all__ = [
     "PoolCreate",
     "PoolUpdate",
     "Settings",
+    "TrackEvent",
+    "Tracked",
+    "TrackResult",
 ]

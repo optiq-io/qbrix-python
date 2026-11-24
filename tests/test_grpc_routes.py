@@ -113,6 +113,7 @@ class TestRouteCoverage:
             ("GET", "/api/v1/runtime/motor/health", "runtime"),
             ("POST", "/api/v1/gates/e1/evaluate", "gate.evaluate()"),
             ("POST", "/api/v1/experiments/e1/reset", "experiment.reset()"),
+            ("POST", "/api/v1/track", "track()"),
         ],
     )
     def test_http_only_paths_raise(self, method: str, path: str, resource: str) -> None:

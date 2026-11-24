@@ -56,9 +56,45 @@ client.outcome(decision.request_id, 1)
 - **`request_id`** is there only when the decision can learn: a live loop. A draft or paused loop answers its fallback without one.
 - **`outcome(request_id, value, *, id=None, at=None)`** reports what happened after one decision. The value must fit the loop's metric (a conversion is 0 or 1). A `None` request_id sends nothing, so call it unconditionally. Each call carries an event `id`, minted by the SDK when you don't pass one, so a retried call counts once. `at` is a `datetime` for when it happened; without one, qbrix uses the time it receives the outcome.
 
+## Credit what happens later: `track`
+
+An outcome often happens somewhere else: an order webhook, a payment, a backend job. `track(metric, value, *, decisions=None, unit=None, id=None, at=None)` sends an event for a metric, and qbrix credits the decisions it belongs to.
+
+**To credit an order or a payment**, the browser carries its decisions to your server. With [qbrix-js](https://github.com/optiq-io/qbrix-js), `qbrix.decisions("purchase")` returns the decisions token; put it in the cart, order or payment metadata, and send it from the webhook:
+
+```python
+client.track("purchase", 1, decisions=order.metadata.get("qbrix_decisions"), id=order.id)
+```
+
+The event credits exactly the decisions in the token whose loop improves the metric, and `Tracked.credited` says how many. Treat the token as opaque: each decision is about 115 characters, so four fit in a 500-character metadata value. See [`examples/webhook.py`](examples/webhook.py).
+
+**For events that never passed through a browser**, send the `unit` the decision was made for. qbrix credits the unit's most recent open decision in each loop that improves the metric, about a minute after the event arrives, so `credited` is `None`:
+
+```python
+client.track("revenue", 49, unit=customer_id, at=renewed_at, id=f"renewal-{invoice_id}")
+```
+
+With no decisions and no unit, `track` sends nothing and returns `None`, so a webhook whose order carried no token needs no special case. An empty token counts as none. Like `outcome`, each call carries an `id` minted once and kept across retries, and an event qbrix refuses raises: `NotFoundError` for an unknown metric, `BadRequestError` for a token with no valid decision or a value the metric doesn't allow. `e.code` names which (`METRIC_NOT_FOUND`, `INVALID_DECISIONS`, `INVALID_OUTCOME`).
+
+### Jobs and pipelines: `track_many`
+
+```python
+from qbrix import TrackEvent
+
+results = client.track_many(
+    TrackEvent(metric="revenue", value=r.amount, unit=r.customer, at=r.at, id=r.id)
+    for r in renewals
+)
+for result in results:
+    if result is not None and result.error is not None:
+        retry_later(result.id, result.error)
+```
+
+`track_many` takes `TrackEvent`s or dicts, sends them in requests of up to 500, and returns one `TrackResult(id, at, credited, error)` per event, in order (`None` for an event with neither decisions nor a unit, which isn't sent). One refused event never refuses the rest: its `error` is the exception `track` would raise. A request that fails as a whole, for example because qbrix can't be reached, puts that error on each of its events and the next request is still sent. Every result carries the `id` that was sent, so resending a failed event with it counts once. See [`examples/backend_job.py`](examples/backend_job.py).
+
 ## When qbrix can't be reached
 
-`select` never raises because qbrix is down. On a connection error, a timeout, a 429 or a 5xx (gRPC `UNAVAILABLE`, `DEADLINE_EXCEEDED`), it returns your `offline` option with reason `offline` and no `request_id`, or `option=None` when you gave none. Errors in the call itself still raise, because they are bugs to fix: a missing unit, a bad key (`AuthenticationError`) or an unknown loop (`NotFoundError`, with the server's message).
+`select` never raises because qbrix is down; `outcome` and `track` do. On a connection error, a timeout, a 429 or a 5xx (gRPC `UNAVAILABLE`, `DEADLINE_EXCEEDED`), it returns your `offline` option with reason `offline` and no `request_id`, or `option=None` when you gave none. Errors in the call itself still raise, because they are bugs to fix: a missing unit, a bad key (`AuthenticationError`) or an unknown loop (`NotFoundError`, with the server's message).
 
 ```python
 decision = client.select(
@@ -122,7 +158,7 @@ When `transport` is omitted it's resolved in this order: the `transport=` kwarg 
 
 gRPC needs a directly-reachable proxy gRPC endpoint. An install served over HTTPS behind a gateway or CDN usually does **not** expose gRPC — use `transport="http"` for it. Reach for gRPC against a local proxy (`grpc://localhost:50050`) or a service deployed alongside the proxy.
 
-The gRPC transport covers `select`, `outcome`, and the pool, experiment, gate and policy operations. The `runtime` resource is HTTP-only (the proxy doesn't expose it over gRPC) — calling it on a gRPC client raises `NotImplementedError`. Install `qbrix[all]` and use `transport="http"` if you need it.
+The gRPC transport covers `select`, `outcome`, and the pool, experiment, gate and policy operations. `track`, `track_many` and the `runtime` resource are HTTP-only (the proxy doesn't expose them over gRPC) — calling them on a gRPC client raises `NotImplementedError`. Install `qbrix[all]` and use `transport="http"` if you need it.
 
 ## Configuration
 
@@ -162,7 +198,7 @@ except BadRequestError as e:
 
 ## Today's API
 
-The pool, experiment, gate and policy resources still talk to today's API until it is retired; the migration guide arrives with the release. `client.agent` is gone from this pre-release: use `select` and `outcome`.
+The pool, experiment, gate and policy resources still talk to today's API until it is retired; the migration guide arrives with the release. `client.agent` is gone from this pre-release: use `select`, `outcome` and `track`.
 
 ## License
 

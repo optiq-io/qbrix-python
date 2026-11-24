@@ -70,6 +70,7 @@ _HTTP_ONLY: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^/api/v1/runtime/"), "the runtime resource"),
     (re.compile(r"^/api/v1/gates/[^/]+/evaluate$"), "gate.evaluate()"),
     (re.compile(r"^/api/v1/experiments/[^/]+/reset$"), "experiment.reset()"),
+    (re.compile(r"^/api/v1/track$"), "track()"),
 )
 
 
