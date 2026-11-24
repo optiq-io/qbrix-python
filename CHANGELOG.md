@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0-a3](https://github.com/optiq-io/qbrix-python/compare/v0.4.0-a2...v0.4.0-a3) (2026-11-24)
+
+
+### Features
+
+* track(metric, value) with a decisions token or a unit, and track_many for jobs ([#46](https://github.com/optiq-io/qbrix-python/issues/46)) ([f44fcc4](https://github.com/optiq-io/qbrix-python/commit/f44fcc4cfbec75fde890b36c5aa389c1c3fc4b50))
+
 ## [0.4.0-a2](https://github.com/optiq-io/qbrix-python/compare/v0.4.0-a1...v0.4.0-a2) (2026-10-26)
 
 
