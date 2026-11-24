@@ -51,6 +51,9 @@ from qbrix.model import Pool
 from qbrix.model import PoolCreate
 from qbrix.model import PoolUpdate
 from qbrix.model import Settings
+from qbrix.model import TrackEvent
+from qbrix.model import Tracked
+from qbrix.model import TrackResult
 from qbrix.model.policy import PolicyName
 from qbrix.model.runtime import ServiceHealth
 from qbrix.model.runtime import StreamSize
@@ -123,4 +126,7 @@ __all__ = [
     "Settings",
     "ServiceHealth",
     "StreamSize",
+    "TrackEvent",
+    "Tracked",
+    "TrackResult",
 ]

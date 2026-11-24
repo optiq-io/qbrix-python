@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from functools import cached_property
 from typing import Any
+from typing import Iterable
 from typing import Literal
 from typing import TYPE_CHECKING
 
@@ -12,6 +13,9 @@ from qbrix.model.common import Context
 from qbrix.model.decision import Decision
 from qbrix.model.decision import Outcome
 from qbrix.model.decision import Settings
+from qbrix.model.decision import TrackEvent
+from qbrix.model.decision import Tracked
+from qbrix.model.decision import TrackResult
 from qbrix.resource.decision import AsyncDecisionResource
 from qbrix.resource.decision import DecisionResource
 from qbrix.resource.experiment import AsyncExperimentResource
@@ -216,6 +220,43 @@ class Qbrix:
             request_id, value, id=id, at=at, timeout=timeout, max_retries=max_retries
         )
 
+    def track(
+        self,
+        metric: str,
+        value: int | float,
+        *,
+        decisions: str | None = None,
+        unit: str | None = None,
+        id: str | None = None,
+        at: datetime | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> Tracked | None:
+        """an event for a metric, crediting the decisions it carries or matched
+        by its unit; with neither, sends nothing and returns None."""
+        return self._decision.track(
+            metric,
+            value,
+            decisions=decisions,
+            unit=unit,
+            id=id,
+            at=at,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+
+    def track_many(
+        self,
+        events: Iterable[TrackEvent | dict[str, Any]],
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> list[TrackResult | None]:
+        """events in batches of up to 500, one result per event, in order."""
+        return self._decision.track_many(
+            events, timeout=timeout, max_retries=max_retries
+        )
+
     @cached_property
     def policy(self) -> PolicyResource:
         return PolicyResource(self)
@@ -326,6 +367,43 @@ class AsyncQbrix:
         """report what happened after one decision; a None request_id sends nothing."""
         return await self._decision.outcome(
             request_id, value, id=id, at=at, timeout=timeout, max_retries=max_retries
+        )
+
+    async def track(
+        self,
+        metric: str,
+        value: int | float,
+        *,
+        decisions: str | None = None,
+        unit: str | None = None,
+        id: str | None = None,
+        at: datetime | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> Tracked | None:
+        """an event for a metric, crediting the decisions it carries or matched
+        by its unit; with neither, sends nothing and returns None."""
+        return await self._decision.track(
+            metric,
+            value,
+            decisions=decisions,
+            unit=unit,
+            id=id,
+            at=at,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+
+    async def track_many(
+        self,
+        events: Iterable[TrackEvent | dict[str, Any]],
+        *,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> list[TrackResult | None]:
+        """events in batches of up to 500, one result per event, in order."""
+        return await self._decision.track_many(
+            events, timeout=timeout, max_retries=max_retries
         )
 
     @cached_property

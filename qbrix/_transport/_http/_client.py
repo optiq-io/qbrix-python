@@ -87,10 +87,12 @@ class BaseClient:
     def _make_status_error(response: httpx.Response) -> QbrixAPIError:
         detail = ""
         context = None
+        code = None
         try:
             body = response.json()
             detail = body.get("detail", response.text)
             context = body.get("context")
+            code = body.get("code")
             if isinstance(detail, list):
                 detail, validation_context = BaseClient._flatten_validation_detail(
                     detail
@@ -105,9 +107,9 @@ class BaseClient:
         if exc_cls is RateLimitedError:
             retry_after_raw = response.headers.get("Retry-After")
             retry_after = float(retry_after_raw) if retry_after_raw else None
-            return RateLimitedError(status, detail, context, retry_after)
+            return RateLimitedError(status, detail, context, retry_after, code=code)
 
-        return exc_cls(status, detail, context)
+        return exc_cls(status, detail, context, code=code)
 
     def _should_retry(self, response: httpx.Response) -> bool:
         return response.status_code in self._config.retry_on

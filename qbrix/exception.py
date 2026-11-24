@@ -13,16 +13,20 @@ class QbrixAPIError(QbrixError):
     status_code: int
     detail: str
     context: dict[str, Any] | None
+    code: str | None
 
     def __init__(
         self,
         status_code: int,
         detail: str,
         context: dict[str, Any] | None = None,
+        *,
+        code: str | None = None,
     ) -> None:
         self.status_code = status_code
         self.detail = detail
         self.context = context
+        self.code = code
         super().__init__(f"[{status_code}] {detail}")
 
 
@@ -67,8 +71,10 @@ class RateLimitedError(QbrixAPIError):
         detail: str,
         context: dict[str, Any] | None = None,
         retry_after: float | None = None,
+        *,
+        code: str | None = None,
     ) -> None:
-        super().__init__(status_code, detail, context)
+        super().__init__(status_code, detail, context, code=code)
         self.retry_after = retry_after
 
 

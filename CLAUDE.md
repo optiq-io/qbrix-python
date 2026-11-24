@@ -104,7 +104,7 @@ The SDK targets these proxy endpoints (all under `/api/v1`):
 - **Pools:** `POST/GET/PATCH/DELETE /pools[/{id}]`, `GET /pools/{id}/experiments`
 - **Experiments:** `POST/GET/PATCH/DELETE /experiments[/{id}]` — supports `?search=&enabled=` filters
 - **Gates:** `POST/GET/PUT/PATCH/DELETE /gates/{experiment_id}`, `POST /gates/{experiment_id}/evaluate` — `gate.update()` sends `PATCH` (partial, matching `pool.update`/`experiment.update`); the proxy's `PUT` full-replace is deliberately unreachable from the SDK since OPT-355. `evaluate` is a read-only dry run and is HTTP-only.
-- **Request path:** `POST /select`, `POST /outcome` (next switch on)
+- **Request path:** `POST /select`, `POST /outcome`, `POST /track` (next switch on)
 - **Policies:** `GET /policies` — supports `?reward_type=` filter (read-only policy discovery)
 
 ### Supported Policies
@@ -127,6 +127,8 @@ Experiment `policy` field values (must match exactly), mirroring the proxy's `qb
 2. `context.unit` is validated locally (non-blank, ≤ 256 chars) before any call.
 3. Connection errors, timeouts, 429 and 5xx (gRPC `UNAVAILABLE`, `DEADLINE_EXCEEDED`, `RESOURCE_EXHAUSTED`, `INTERNAL`) return `settings.offline` with reason `offline` and no `request_id` — never raise. 4xx caller errors raise.
 4. `client.outcome(request_id, value, id=, at=)` → `POST /outcome` (202 `{id, at}`) / `LoopService/Outcome`. `None` request_id sends nothing. The SDK mints `id` once per call, so transport retries reuse it; `at` goes as ISO 8601 (HTTP) or a `Timestamp` (gRPC).
+5. `client.track(metric, value, decisions=, unit=, id=, at=)` → `POST /track` single-event body (202 `{id, at, credited}`, `credited` null for a unit event). No decisions (an empty token counts as none) and no unit sends nothing. HTTP-only: the proxy has no gRPC `Track`. Refusals raise with `QbrixAPIError.code` set (`METRIC_NOT_FOUND` 404, `INVALID_DECISIONS` / `INVALID_OUTCOME` 400).
+6. `client.track_many(events)` → `POST /track` `{events: [...]}` in chunks of `TRACK_BATCH_MAX` (500, the proxy's cap), sequentially. Returns `list[TrackResult | None]` in input order; a per-event `error {code, detail}` becomes the typed exception `track` would raise, and a chunk that fails as a whole puts its exception on each of its events. Ids are minted before sending so every result carries the id that was sent.
 
 ### Feature Gate Evaluation Order
 
